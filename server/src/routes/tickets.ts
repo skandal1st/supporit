@@ -302,6 +302,98 @@ router.put('/:id', authenticate, async (req: AuthRequest, res: Response) => {
     const result = await pool.query(query, values);
     const ticket = result.rows[0];
 
+    // Проверяем, изменился ли статус на closed или resolved
+    const oldStatus = existingTicket.status;
+    const newStatus = ticket.status;
+    const statusChangedToClosedOrResolved = 
+      (newStatus === 'closed' || newStatus === 'resolved') && 
+      oldStatus !== 'closed' && 
+      oldStatus !== 'resolved';
+
+    // Если статус изменился на closed/resolved и есть оборудование, списываем расходники
+    if (statusChangedToClosedOrResolved && ticket.equipment_id) {
+      try {
+        // Получаем расходники для оборудования
+        const consumablesResult = await pool.query(
+          'SELECT * FROM get_consumables_for_equipment($1)',
+          [ticket.equipment_id]
+        );
+
+        if (consumablesResult.rows.length > 0) {
+          // Получаем информацию о владельце оборудования (кому выдать)
+          const equipmentResult = await pool.query(
+            'SELECT current_owner_id FROM equipment WHERE id = $1',
+            [ticket.equipment_id]
+          );
+          const equipmentOwnerId = equipmentResult.rows[0]?.current_owner_id || ticket.creator_id;
+
+          // Определяем, кто выдал (assignee или текущий пользователь)
+          const issuedById = ticket.assignee_id || req.userId;
+
+          // Используем одну транзакцию для всех расходников
+          const client = await pool.connect();
+          try {
+            await client.query('BEGIN');
+
+            // Создаем записи о выдаче расходников
+            for (const consumable of consumablesResult.rows) {
+              const quantityToIssue = consumable.quantity_per_unit || 1;
+              
+              // Проверяем и обновляем количество на складе атомарно
+              const checkResult = await client.query(
+                `SELECT quantity_in_stock FROM consumables WHERE id = $1 FOR UPDATE`,
+                [consumable.consumable_id]
+              );
+              
+              if (checkResult.rows.length === 0) {
+                console.warn(`Расходник не найден: ${consumable.consumable_id} (заявка ${ticket.id})`);
+                continue;
+              }
+              
+              const currentStock = checkResult.rows[0].quantity_in_stock;
+              
+              if (currentStock >= quantityToIssue) {
+                // Создаем запись в consumable_issues
+                await client.query(
+                  `INSERT INTO consumable_issues (
+                    consumable_id, quantity, issued_to_id, issued_by_id, reason, created_at
+                  ) VALUES ($1, $2, $3, $4, $5, NOW())`,
+                  [
+                    consumable.consumable_id,
+                    quantityToIssue,
+                    equipmentOwnerId,
+                    issuedById,
+                    `Заявка #${ticket.id}: ${ticket.title}`
+                  ]
+                );
+
+                // Уменьшаем количество на складе
+                await client.query(
+                  `UPDATE consumables 
+                   SET quantity_in_stock = quantity_in_stock - $1, updated_at = NOW()
+                   WHERE id = $2`,
+                  [quantityToIssue, consumable.consumable_id]
+                );
+              } else {
+                console.warn(`Недостаточно расходников на складе: ${consumable.consumable_name} (текущий остаток: ${currentStock}, требуется: ${quantityToIssue}) (заявка ${ticket.id})`);
+              }
+            }
+            
+            await client.query('COMMIT');
+          } catch (txError: any) {
+            await client.query('ROLLBACK');
+            console.error('Ошибка при списании расходников:', txError);
+            // Не прерываем выполнение, просто логируем ошибку
+          } finally {
+            client.release();
+          }
+        }
+      } catch (consumableError: any) {
+        console.error('Ошибка при списании расходников:', consumableError);
+        // Не прерываем выполнение, просто логируем ошибку
+      }
+    }
+
     // Загружаем связанные данные
     const [creator, assignee, equipment, consumables] = await Promise.all([
       pool.query('SELECT id, email, full_name, department FROM users WHERE id = $1', [ticket.creator_id]),
