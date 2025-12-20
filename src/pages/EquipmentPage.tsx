@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Plus, Search, Edit, Trash2 } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Network } from 'lucide-react';
 import { equipmentService, type EquipmentFilters } from '../services/equipment.service';
 import type { Equipment, EquipmentStatus } from '../types';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
 import { EquipmentForm } from '../components/equipment/EquipmentForm';
+import { NetworkScanner } from '../components/equipment/NetworkScanner';
 import { Table, TableHeader, TableHeaderCell, TableBody, TableRow, TableCell } from '../components/ui/Table';
 import { formatCurrency, getStatusLabel, getStatusColor, getCategoryLabel } from '../utils/format';
 import { useAuthStore } from '../store/auth.store';
@@ -21,6 +22,7 @@ export const EquipmentPage = () => {
   const [editingEquipment, setEditingEquipment] = useState<Equipment | undefined>();
   const [searchTerm, setSearchTerm] = useState('');
   const [filters, setFilters] = useState<EquipmentFilters>({});
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
 
   const [error, setError] = useState<string | null>(null);
   const canManage = canManageEquipment(user?.role);
@@ -124,10 +126,16 @@ export const EquipmentPage = () => {
           </p>
         </div>
         {canManage && (
-          <Button onClick={handleCreate}>
-            <Plus className="h-5 w-5 mr-2" />
-            Добавить оборудование
-          </Button>
+          <div className="flex gap-3">
+            <Button variant="secondary" onClick={() => setIsScannerOpen(true)}>
+              <Network className="h-5 w-5 mr-2" />
+              Сканер сети
+            </Button>
+            <Button onClick={handleCreate}>
+              <Plus className="h-5 w-5 mr-2" />
+              Добавить оборудование
+            </Button>
+          </div>
         )}
       </div>
 
@@ -293,7 +301,7 @@ export const EquipmentPage = () => {
         )}
       </div>
 
-      {/* Modal */}
+      {/* Modal для формы оборудования */}
       <Modal
         isOpen={isModalOpen}
         onClose={() => {
@@ -310,6 +318,22 @@ export const EquipmentPage = () => {
             setIsModalOpen(false);
             setEditingEquipment(undefined);
           }}
+        />
+      </Modal>
+
+      {/* Modal для сканера сети */}
+      <Modal
+        isOpen={isScannerOpen}
+        onClose={() => setIsScannerOpen(false)}
+        title="Сканер сети"
+        size="xl"
+      >
+        <NetworkScanner
+          onDevicesSelected={() => {
+            setIsScannerOpen(false);
+            loadEquipment();
+          }}
+          onClose={() => setIsScannerOpen(false)}
         />
       </Modal>
     </div>

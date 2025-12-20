@@ -1,6 +1,16 @@
 import { Router, Response } from 'express';
 import { pool } from '../config/database.js';
 import { authenticate, requireRole, AuthRequest } from '../middleware/auth.js';
+import { exec, spawn } from 'child_process';
+import { promisify } from 'util';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+import fs from 'fs';
+
+const execAsync = promisify(exec);
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const router = Router();
 
@@ -708,6 +718,275 @@ router.get('/:id/consumables', authenticate, async (req: AuthRequest, res: Respo
     res.status(500).json({ 
       error: 'Ошибка при получении расходников',
       message: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
+// Сканирование сети для поиска устройств
+router.post('/scan-network', authenticate, requireRole('admin', 'it_specialist'), async (req: AuthRequest, res: Response) => {
+  try {
+    const { startIp, endIp, subnet, singleIp, domainUser, domainPassword, domainServer } = req.body;
+
+    if (!startIp && !subnet && !singleIp) {
+      return res.status(400).json({ error: 'Необходимо указать startIp, subnet или singleIp' });
+    }
+
+    // Используем Python скрипт для сканирования
+    // Получаем путь к Python скрипту (относительно server/src/routes/)
+    const scriptPath = path.join(__dirname, '..', '..', 'scripts', 'network_scanner.py');
+    const venvPython = path.join(__dirname, '..', '..', 'scripts', 'venv', 'bin', 'python3');
+
+    // Проверяем существование виртуального окружения, иначе используем системный python3
+    const pythonCmd = fs.existsSync(venvPython) ? venvPython : 'python3';
+
+    // Формируем команду
+    let command = `"${pythonCmd}" "${scriptPath}"`;
+    
+    if (subnet) {
+      command += ` --subnet "${subnet}"`;
+    } else if (startIp && endIp) {
+      command += ` --start-ip "${startIp}" --end-ip "${endIp}"`;
+    } else if (singleIp) {
+      command += ` --single-ip "${singleIp}"`;
+    } else if (startIp) {
+      command += ` --single-ip "${startIp}"`;
+    }
+
+    // Добавляем учетные данные домена, если они предоставлены
+    if (domainUser && domainPassword) {
+      command += ` --domain-user "${domainUser}"`;
+      command += ` --domain-password "${domainPassword}"`;
+      if (domainServer) {
+        command += ` --domain-server "${domainServer}"`;
+      }
+    }
+
+    console.log(`[SCAN] Запуск Python скрипта сканирования сети...`);
+    console.log(`[SCAN] Параметры:`, { subnet, startIp, endIp, singleIp, domainUser: domainUser ? 'указан' : 'не указан' });
+    const startTime = Date.now();
+
+    try {
+      // Используем spawn для получения прогресса в реальном времени
+      const pythonCmdPath = pythonCmd.replace(/"/g, '');
+      const scriptPathClean = scriptPath.replace(/"/g, '');
+      
+      const args: string[] = [scriptPathClean];
+      if (subnet) args.push('--subnet', subnet);
+      if (startIp && endIp) {
+        args.push('--start-ip', startIp, '--end-ip', endIp);
+      }
+      if (singleIp) args.push('--single-ip', singleIp);
+      if (domainUser && domainPassword) {
+        args.push('--domain-user', domainUser, '--domain-password', domainPassword);
+        if (domainServer) args.push('--domain-server', domainServer);
+      }
+
+      let stdout = '';
+      let stderr = '';
+
+      await new Promise<void>((resolve, reject) => {
+        const pythonProcess = spawn(pythonCmdPath, args, {
+          cwd: path.join(__dirname, '..', '..', 'scripts'),
+        });
+
+        pythonProcess.stdout.on('data', (data) => {
+          const output = data.toString();
+          stdout += output;
+        });
+
+        pythonProcess.stderr.on('data', (data) => {
+          const output = data.toString();
+          stderr += output;
+          // Логируем прогресс в реальном времени
+          const lines = output.split('\n').filter((line: string) => line.trim());
+          lines.forEach((line: string) => {
+            if (line.includes('[PROGRESS]')) {
+              console.log(`[SCAN] ${line.replace('[PROGRESS]', '').trim()}`);
+            } else if (line.includes('[ERROR]')) {
+              console.error(`[SCAN] ${line.replace('[ERROR]', '').trim()}`);
+            }
+          });
+        });
+
+        pythonProcess.on('close', (code) => {
+          if (code === 0 || stdout.trim()) {
+            resolve();
+          } else {
+            reject(new Error(`Python скрипт завершился с кодом ${code}`));
+          }
+        });
+
+        pythonProcess.on('error', (error) => {
+          reject(error);
+        });
+      });
+
+      // Игнорируем stderr, если это только предупреждения (nmap может выводить предупреждения)
+      // Проверяем, что в stdout есть валидный JSON
+      let devices: any[] = [];
+      
+      if (stdout && stdout.trim()) {
+        try {
+          devices = JSON.parse(stdout);
+        } catch (parseError) {
+          // Если не удалось распарсить JSON, возможно есть ошибка
+          console.error('Ошибка парсинга JSON от Python скрипта:', parseError);
+          console.error('stdout:', stdout);
+          if (stderr) {
+            console.warn('stderr:', stderr);
+          }
+          return res.status(500).json({
+            error: 'Ошибка при обработке результатов сканирования',
+            message: process.env.NODE_ENV === 'development' ? 'Не удалось распарсить ответ от скрипта' : undefined,
+          });
+        }
+      }
+
+      if (stderr && !stdout) {
+        // Если есть только stderr и нет stdout, это ошибка
+        console.error('Ошибка выполнения Python скрипта:', stderr);
+        return res.status(500).json({
+          error: 'Ошибка при сканировании сети',
+          message: process.env.NODE_ENV === 'development' ? stderr : undefined,
+        });
+      }
+      
+      console.log(`Найдено устройств: ${devices.length}`);
+
+      res.json({
+        data: devices,
+        count: devices.length,
+      });
+    } catch (execError: any) {
+      const elapsedTime = ((Date.now() - startTime) / 1000).toFixed(2);
+      console.error(`[SCAN] Ошибка выполнения Python скрипта (${elapsedTime}с):`, execError);
+      
+      // Если это ошибка парсинга JSON, возможно скрипт вернул ошибку в stdout
+      if (execError.stdout) {
+        try {
+          const errorData = JSON.parse(execError.stdout);
+          return res.status(500).json({
+            error: errorData.error || 'Ошибка при сканировании сети',
+            message: process.env.NODE_ENV === 'development' ? errorData.message : undefined,
+          });
+        } catch {
+          // Не JSON, значит это настоящая ошибка
+        }
+      }
+      
+      res.status(500).json({
+        error: 'Ошибка при выполнении сканирования сети',
+        message: process.env.NODE_ENV === 'development' ? execError.message : undefined,
+      });
+    }
+  } catch (error: any) {
+    console.error('Ошибка сканирования сети:', error);
+    res.status(500).json({
+      error: 'Ошибка при сканировании сети',
+      message: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+});
+
+// Массовое создание оборудования из результатов сканирования
+router.post('/bulk-create-from-scan', authenticate, requireRole('admin', 'it_specialist'), async (req: AuthRequest, res: Response) => {
+  try {
+    const { devices, defaults } = req.body;
+
+    if (!Array.isArray(devices) || devices.length === 0) {
+      return res.status(400).json({ error: 'Необходимо передать массив устройств' });
+    }
+
+    const created: any[] = [];
+    const errors: any[] = [];
+
+    for (const device of devices) {
+      try {
+        const {
+          ip,
+          hostname,
+          mac,
+          category = 'network',
+          status = 'in_stock',
+          location_department,
+          location_room,
+          manufacturer,
+        } = device;
+
+        // Генерируем инвентарный номер и название
+        const { generateInventoryNumber, generateDeviceName } = await import('../utils/networkScanner.js');
+        const inventoryNumber = device.inventory_number || generateInventoryNumber(ip);
+        const name = device.name || generateDeviceName(device);
+
+        // Проверяем, не существует ли уже оборудование с таким инвентарным номером
+        const existingCheck = await pool.query(
+          'SELECT id FROM equipment WHERE inventory_number = $1',
+          [inventoryNumber]
+        );
+
+        if (existingCheck.rows.length > 0) {
+          errors.push({
+            ip,
+            error: 'Оборудование с таким инвентарным номером уже существует',
+          });
+          continue;
+        }
+
+        // Создаем specifications с информацией о сети
+        const specifications: any = {
+          ip_address: ip,
+        };
+        if (mac) specifications.mac_address = mac;
+        if (hostname) specifications.hostname = hostname;
+        if (device.responseTime) specifications.response_time_ms = device.responseTime;
+
+        // Применяем значения по умолчанию из defaults
+        const finalCategory = defaults?.category || category;
+        const finalStatus = defaults?.status || status;
+        const finalLocationDepartment = device.location_department || defaults?.location_department;
+        const finalLocationRoom = device.location_room || defaults?.location_room;
+        const finalManufacturer = manufacturer || defaults?.manufacturer;
+
+        const result = await pool.query(
+          `INSERT INTO equipment (
+            name, inventory_number, category, status,
+            location_department, location_room, manufacturer,
+            specifications, created_at, updated_at
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, NOW(), NOW())
+          RETURNING *`,
+          [
+            name,
+            inventoryNumber,
+            finalCategory,
+            finalStatus,
+            finalLocationDepartment || null,
+            finalLocationRoom || null,
+            finalManufacturer || null,
+            JSON.stringify(specifications),
+          ]
+        );
+
+        created.push(result.rows[0]);
+      } catch (error: any) {
+        console.error(`Ошибка создания оборудования для ${device.ip}:`, error);
+        errors.push({
+          ip: device.ip,
+          error: error.message || 'Неизвестная ошибка',
+        });
+      }
+    }
+
+    res.json({
+      data: created,
+      created: created.length,
+      errors: errors.length,
+      errorDetails: errors,
+    });
+  } catch (error: any) {
+    console.error('Ошибка массового создания оборудования:', error);
+    res.status(500).json({
+      error: 'Ошибка при массовом создании оборудования',
+      message: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
   }
 });
