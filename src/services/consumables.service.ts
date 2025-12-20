@@ -1,5 +1,5 @@
 import { get, post, put, del } from '../lib/api';
-import type { Consumable } from '../types';
+import type { Consumable, ConsumableIssue } from '../types';
 
 export const consumablesService = {
   // Получить список расходников
@@ -87,6 +87,34 @@ export const consumablesService = {
       return { error: null };
     } catch (error) {
       return { error: error as Error };
+    }
+  },
+
+  // Получить историю выдачи расходников
+  async getConsumableIssues(params?: {
+    consumable_id?: string;
+    issued_to_id?: string;
+    page?: number;
+    pageSize?: number;
+  }): Promise<{ data: ConsumableIssue[]; count: number; error: Error | null }> {
+    try {
+      const queryParams = new URLSearchParams();
+      if (params?.consumable_id) queryParams.append('consumable_id', params.consumable_id);
+      if (params?.issued_to_id) queryParams.append('issued_to_id', params.issued_to_id);
+      if (params?.page) queryParams.append('page', params.page.toString());
+      if (params?.pageSize) queryParams.append('pageSize', params.pageSize.toString());
+
+      const { data, error } = await get<{ data: ConsumableIssue[]; count: number }>(
+        `/consumables/issues${queryParams.toString() ? '?' + queryParams.toString() : ''}`
+      );
+
+      if (error || !data) {
+        return { data: [], count: 0, error: error || new Error('Ошибка загрузки истории выдачи') };
+      }
+
+      return { data: data.data, count: data.count, error: null };
+    } catch (error) {
+      return { data: [], count: 0, error: error as Error };
     }
   },
 };

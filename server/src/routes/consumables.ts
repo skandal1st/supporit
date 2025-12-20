@@ -50,6 +50,96 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
   }
 });
 
+// Получить историю выдачи расходников
+router.get('/issues', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    const { consumable_id, issued_to_id, page = '1', pageSize = '20' } = req.query;
+
+    let query = `
+      SELECT 
+        ci.*,
+        c.name as consumable_name,
+        c.model as consumable_model,
+        c.unit as consumable_unit,
+        issued_to.id as issued_to_id,
+        issued_to.full_name as issued_to_name,
+        issued_to.email as issued_to_email,
+        issued_by.id as issued_by_id,
+        issued_by.full_name as issued_by_name,
+        issued_by.email as issued_by_email
+      FROM consumable_issues ci
+      JOIN consumables c ON ci.consumable_id = c.id
+      LEFT JOIN users issued_to ON ci.issued_to_id = issued_to.id
+      LEFT JOIN users issued_by ON ci.issued_by_id = issued_by.id
+      WHERE 1=1
+    `;
+    const params: any[] = [];
+    let paramCount = 0;
+
+    if (consumable_id) {
+      paramCount++;
+      query += ` AND ci.consumable_id = $${paramCount}`;
+      params.push(consumable_id);
+    }
+
+    if (issued_to_id) {
+      paramCount++;
+      query += ` AND ci.issued_to_id = $${paramCount}`;
+      params.push(issued_to_id);
+    }
+
+    // Подсчет общего количества
+    const countQuery = query.replace(/SELECT[\s\S]*FROM/, 'SELECT COUNT(*) FROM');
+    const countResult = await pool.query(countQuery, params);
+    const totalCount = parseInt(countResult.rows[0].count);
+
+    // Пагинация
+    const pageNum = parseInt(page as string);
+    const pageSizeNum = parseInt(pageSize as string);
+    const offset = (pageNum - 1) * pageSizeNum;
+
+    query += ` ORDER BY ci.created_at DESC LIMIT $${paramCount + 1} OFFSET $${paramCount + 2}`;
+    params.push(pageSizeNum, offset);
+
+    const result = await pool.query(query, params);
+
+    // Преобразуем результаты в нужный формат
+    const issues = result.rows.map((row: any) => ({
+      id: row.id,
+      consumable_id: row.consumable_id,
+      consumable: {
+        id: row.consumable_id,
+        name: row.consumable_name,
+        model: row.consumable_model,
+        unit: row.consumable_unit,
+      },
+      quantity: row.quantity,
+      issued_to_id: row.issued_to_id,
+      issued_to: row.issued_to_id ? {
+        id: row.issued_to_id,
+        full_name: row.issued_to_name,
+        email: row.issued_to_email,
+      } : null,
+      issued_by_id: row.issued_by_id,
+      issued_by: row.issued_by_id ? {
+        id: row.issued_by_id,
+        full_name: row.issued_by_name,
+        email: row.issued_by_email,
+      } : null,
+      reason: row.reason,
+      created_at: row.created_at,
+    }));
+
+    res.json({
+      data: issues,
+      count: totalCount,
+    });
+  } catch (error) {
+    console.error('Ошибка получения истории выдачи расходников:', error);
+    res.status(500).json({ error: 'Ошибка при получении истории выдачи расходников' });
+  }
+});
+
 // Получить расходник по ID
 router.get('/:id', authenticate, async (req: AuthRequest, res: Response) => {
   try {
