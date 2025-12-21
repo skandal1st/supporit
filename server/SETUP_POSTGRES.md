@@ -260,3 +260,5 @@ docker exec -i supporit-postgres psql -U postgres -d supporit < supabase/schema_
 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/supporit
 ```
 
+
+

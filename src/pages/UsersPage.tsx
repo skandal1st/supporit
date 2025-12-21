@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, Edit, Users as UsersIcon, Plus } from 'lucide-react';
+import { Search, Edit, Users as UsersIcon, Plus, Trash2 } from 'lucide-react';
 import { usersService } from '../services/users.service';
 import type { User, UserRole } from '../types';
 import { Button } from '../components/ui/Button';
@@ -7,7 +7,7 @@ import { Modal } from '../components/ui/Modal';
 import { UserForm } from '../components/users/UserForm';
 import { Table, TableHeader, TableHeaderCell, TableBody, TableRow, TableCell } from '../components/ui/Table';
 import { useAuthStore } from '../store/auth.store';
-import { isITSpecialist } from '../utils/permissions';
+import { isITSpecialist, canManageUsers } from '../utils/permissions';
 
 const roleLabels: Record<UserRole, string> = {
   admin: 'Администратор',
@@ -30,7 +30,8 @@ export const UsersPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [formLoading, setFormLoading] = useState(false);
-  const canManageUsers = isITSpecialist(currentUser?.role);
+  const canManage = isITSpecialist(currentUser?.role);
+  const canDelete = canManageUsers(currentUser?.role); // Только админы могут удалять
 
   const loadUsers = async () => {
     setLoading(true);
@@ -103,6 +104,25 @@ export const UsersPage = () => {
     }
   };
 
+  const handleDelete = async (user: User) => {
+    // Нельзя удалить самого себя
+    if (user.id === currentUser?.id) {
+      alert('Нельзя удалить самого себя');
+      return;
+    }
+
+    if (!confirm(`Вы уверены, что хотите удалить пользователя "${user.full_name}" (${user.email})?`)) {
+      return;
+    }
+
+    const { error } = await usersService.deleteUser(user.id);
+    if (error) {
+      alert('Ошибка при удалении: ' + error.message);
+    } else {
+      loadUsers();
+    }
+  };
+
   const filteredUsers = users.filter((user) =>
     user.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -122,7 +142,7 @@ export const UsersPage = () => {
             Управление пользователями и правами доступа
           </p>
         </div>
-        {canManageUsers && (
+        {canManage && (
           <Button onClick={handleCreate}>
             <Plus className="h-5 w-5 mr-2" />
             Добавить пользователя
@@ -201,14 +221,25 @@ export const UsersPage = () => {
                     {new Date(user.created_at).toLocaleDateString('ru-RU')}
                   </TableCell>
                   <TableCell>
-                    {canManageUsers && (
-                      <button
-                        onClick={() => handleEdit(user)}
-                        className="p-2 text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-lg transition-colors"
-                        title="Редактировать"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </button>
+                    {canManage && (
+                      <div className="flex items-center space-x-2">
+                        <button
+                          onClick={() => handleEdit(user)}
+                          className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                          title="Редактировать"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </button>
+                        {canDelete && user.id !== currentUser?.id && (
+                          <button
+                            onClick={() => handleDelete(user)}
+                            className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                            title="Удалить"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        )}
+                      </div>
                     )}
                   </TableCell>
                 </TableRow>

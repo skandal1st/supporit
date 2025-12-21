@@ -17,6 +17,7 @@ const ticketSchema = z.object({
   location_room: z.string().optional(),
   equipment_id: z.string().optional().nullable(),
   desired_resolution_date: z.string().optional(),
+  selected_consumables: z.array(z.string()).optional(),
 });
 
 type TicketFormData = z.infer<typeof ticketSchema>;
@@ -30,7 +31,9 @@ interface TicketFormProps {
 
 export const TicketForm = ({ ticket, onSubmit, onCancel, loading }: TicketFormProps) => {
   const [equipmentList, setEquipmentList] = useState<Equipment[]>([]);
+  const [selectedEquipment, setSelectedEquipment] = useState<Equipment | null>(null);
   const [consumables, setConsumables] = useState<EquipmentConsumable[]>([]);
+  const [selectedConsumables, setSelectedConsumables] = useState<Set<string>>(new Set());
   const [buildings, setBuildings] = useState<Building[]>([]);
   const [loadingEquipment, setLoadingEquipment] = useState(false);
   const [loadingConsumables, setLoadingConsumables] = useState(false);
@@ -141,34 +144,56 @@ export const TicketForm = ({ ticket, onSubmit, onCancel, loading }: TicketFormPr
     return () => clearTimeout(timeoutId);
   }, [watchedDepartment, watchedRoom, reset, watch, ticket]);
 
-  // Загружаем расходники при выборе оборудования
+  // Загружаем информацию об оборудовании и расходники при выборе оборудования
   useEffect(() => {
-    const loadConsumables = async () => {
+    const loadEquipmentAndConsumables = async () => {
       if (watchedEquipmentId) {
-        console.log('Загрузка расходников для оборудования:', watchedEquipmentId);
+        console.log('Загрузка информации об оборудовании и расходников:', watchedEquipmentId);
         setLoadingConsumables(true);
         try {
+          // Загружаем полную информацию об оборудовании
+          const { data: equipmentData, error: equipmentError } = await equipmentService.getEquipmentById(watchedEquipmentId);
+          if (!equipmentError && equipmentData) {
+            setSelectedEquipment(equipmentData);
+          } else {
+            setSelectedEquipment(null);
+          }
+
+          // Загружаем расходники
           const { data, error } = await equipmentService.getEquipmentConsumables(watchedEquipmentId);
           if (!error && data) {
             console.log('Загружено расходников:', data.length, 'единиц', data);
             setConsumables(data);
+            
+            // Если это существующий тикет, загружаем выбранные расходники
+            if (ticket?.selected_consumables && Array.isArray(ticket.selected_consumables)) {
+              const selected = new Set(ticket.selected_consumables);
+              setSelectedConsumables(selected);
+            } else if (ticket?.consumables) {
+              // Fallback на старый формат, если selected_consumables нет
+              const selected = new Set(ticket.consumables.map(c => c.consumable_id));
+              setSelectedConsumables(selected);
+            }
           } else {
             console.error('Ошибка загрузки расходников:', error);
             setConsumables([]);
           }
         } catch (err) {
-          console.error('Исключение при загрузке расходников:', err);
+          console.error('Исключение при загрузке:', err);
           setConsumables([]);
+          setSelectedEquipment(null);
         } finally {
           setLoadingConsumables(false);
         }
       } else {
         setConsumables([]);
+        setSelectedEquipment(null);
+        setSelectedConsumables(new Set());
       }
     };
 
-    loadConsumables();
-  }, [watchedEquipmentId]);
+    loadEquipmentAndConsumables();
+  }, [watchedEquipmentId, ticket]);
 
   useEffect(() => {
     if (ticket) {
@@ -183,6 +208,11 @@ export const TicketForm = ({ ticket, onSubmit, onCancel, loading }: TicketFormPr
         equipment_id: ticket.equipment_id || null,
         desired_resolution_date: formatDateForInput(ticket.desired_resolution_date),
       });
+      
+      // Загружаем выбранные расходники
+      if (ticket.selected_consumables && Array.isArray(ticket.selected_consumables)) {
+        setSelectedConsumables(new Set(ticket.selected_consumables));
+      }
       
       // Если у тикета есть оборудование, загружаем его в список оборудования
       if (ticket.equipment_id && ticket.location_department && ticket.location_room) {
@@ -199,8 +229,68 @@ export const TicketForm = ({ ticket, onSubmit, onCancel, loading }: TicketFormPr
     }
   }, [ticket, reset]);
 
+  // Функция для фильтрации расходников в зависимости от типа принтера
+  const getFilteredConsumables = () => {
+    if (!selectedEquipment || selectedEquipment.category !== 'printer') {
+      return consumables;
+    }
+
+    const specs = selectedEquipment.specifications || {};
+    const printType = specs.print_type;
+    const isColor = specs.is_color === true || specs.is_color === 'true';
+
+    return consumables.filter(consumable => {
+      const consumableType = (consumable as any).consumable_type || '';
+      
+      // Для лазерных принтеров показываем картриджи и фотобарабаны
+      if (printType === 'laser') {
+        if (isColor) {
+          // Для цветных лазерных принтеров показываем все картриджи (4 цвета) и фотобарабан
+          return consumableType === 'cartridge' || consumableType === 'drum';
+        } else {
+          // Для чёрно-белых лазерных принтеров показываем один картридж и фотобарабан
+          return consumableType === 'cartridge' || consumableType === 'drum';
+        }
+      } else if (printType === 'inkjet') {
+        // Для струйных принтеров показываем только картриджи/чернила
+        if (isColor) {
+          // Для цветных струйных принтеров показываем все картриджи/чернила (4 цвета)
+          return consumableType === 'cartridge' || consumableType === 'ink';
+        } else {
+          // Для чёрно-белых струйных принтеров показываем один картридж/чернила
+          return consumableType === 'cartridge' || consumableType === 'ink';
+        }
+      }
+      
+      // Для других типов принтеров показываем все расходники
+      return true;
+    });
+  };
+
+  const filteredConsumables = getFilteredConsumables();
+
+  // Обработчик изменения выбора расходника
+  const handleConsumableToggle = (consumableId: string) => {
+    const newSelected = new Set(selectedConsumables);
+    if (newSelected.has(consumableId)) {
+      newSelected.delete(consumableId);
+    } else {
+      newSelected.add(consumableId);
+    }
+    setSelectedConsumables(newSelected);
+  };
+
+  // Обработчик отправки формы с выбранными расходниками
+  const handleFormSubmit = async (data: TicketFormData) => {
+    const submitData = {
+      ...data,
+      selected_consumables: Array.from(selectedConsumables),
+    };
+    await onSubmit(submitData);
+  };
+
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+    <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="md:col-span-2">
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -333,30 +423,79 @@ export const TicketForm = ({ ticket, onSubmit, onCancel, loading }: TicketFormPr
             <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
               <div className="flex items-center mb-2">
                 <Package className="h-5 w-5 text-blue-600 dark:text-blue-400 mr-2" />
-                <h3 className="font-medium text-blue-900 dark:text-blue-100">Расходные материалы для оборудования</h3>
+                <h3 className="font-medium text-blue-900 dark:text-blue-100">
+                  Расходные материалы для оборудования
+                  {selectedEquipment?.category === 'printer' && (
+                    <span className="text-xs font-normal text-blue-700 dark:text-blue-300 ml-2">
+                      ({selectedEquipment.specifications?.print_type === 'laser' ? 'Лазерный' : selectedEquipment.specifications?.print_type === 'inkjet' ? 'Струйный' : 'Принтер'}
+                      {selectedEquipment.specifications?.is_color === true || selectedEquipment.specifications?.is_color === 'true' ? ', цветной' : ', чёрно-белый'})
+                    </span>
+                  )}
+                </h3>
               </div>
               {loadingConsumables ? (
                 <div className="text-sm text-blue-700 dark:text-blue-300">Загрузка расходников...</div>
+              ) : filteredConsumables.length > 0 ? (
+                <div className="space-y-2">
+                  <p className="text-xs text-blue-700 dark:text-blue-300 mb-2">
+                    Выберите расходные материалы, которые необходимо использовать:
+                  </p>
+                  <ul className="space-y-2">
+                    {filteredConsumables.map((consumable) => {
+                      const isSelected = selectedConsumables.has(consumable.consumable_id);
+                      const consumableType = (consumable as any).consumable_type || '';
+                      const typeLabels: Record<string, string> = {
+                        cartridge: 'Картридж',
+                        drum: 'Фотобарабан',
+                        toner: 'Тонер',
+                        ink: 'Чернила',
+                        paper: 'Бумага',
+                        other: 'Прочее',
+                      };
+                      
+                      return (
+                        <li 
+                          key={consumable.consumable_id} 
+                          className={`flex items-center justify-between text-sm p-2 rounded border ${
+                            isSelected 
+                              ? 'bg-blue-100 dark:bg-blue-900/40 border-blue-300 dark:border-blue-700' 
+                              : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700'
+                          }`}
+                        >
+                          <label className="flex items-center cursor-pointer flex-1">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => handleConsumableToggle(consumable.consumable_id)}
+                              className="mr-3 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                            />
+                            <span className="text-blue-900 dark:text-blue-100 flex-1">
+                              {consumable.consumable_name}
+                              {consumable.consumable_model && ` (${consumable.consumable_model})`}
+                              {consumableType && (
+                                <span className="ml-2 text-xs text-blue-600 dark:text-blue-400">
+                                  [{typeLabels[consumableType] || consumableType}]
+                                </span>
+                              )}
+                            </span>
+                          </label>
+                          <div className="flex items-center gap-2 ml-4">
+                            {consumable.is_low_stock && (
+                              <AlertCircle className="h-4 w-4 text-yellow-500" title="Низкий остаток" />
+                            )}
+                            <span className={`font-medium text-xs ${consumable.is_low_stock ? 'text-yellow-600 dark:text-yellow-400' : 'text-blue-700 dark:text-blue-300'}`}>
+                              В наличии: {consumable.quantity_in_stock} {consumable.min_quantity > 0 && `(мин: ${consumable.min_quantity})`}
+                            </span>
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
               ) : consumables.length > 0 ? (
-                <ul className="space-y-2">
-                  {consumables.map((consumable) => (
-                    <li key={consumable.consumable_id} className="flex items-center justify-between text-sm">
-                      <span className="text-blue-900 dark:text-blue-100">
-                        {consumable.consumable_name}
-                        {consumable.consumable_model && ` (${consumable.consumable_model})`}
-                        {consumable.consumable_category && ` - ${consumable.consumable_category}`}
-                      </span>
-                      <div className="flex items-center gap-2">
-                        {consumable.is_low_stock && (
-                          <AlertCircle className="h-4 w-4 text-yellow-500" title="Низкий остаток" />
-                        )}
-                        <span className={`font-medium ${consumable.is_low_stock ? 'text-yellow-600 dark:text-yellow-400' : 'text-blue-700 dark:text-blue-300'}`}>
-                          В наличии: {consumable.quantity_in_stock} {consumable.min_quantity > 0 && `(мин: ${consumable.min_quantity})`}
-                        </span>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
+                <div className="text-sm text-blue-700 dark:text-blue-300">
+                  Для данного типа принтера не найдено подходящих расходных материалов
+                </div>
               ) : (
                 <div className="text-sm text-blue-700 dark:text-blue-300">
                   Для данного оборудования не указаны расходные материалы

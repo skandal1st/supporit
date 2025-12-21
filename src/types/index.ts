@@ -107,6 +107,7 @@ export interface Ticket {
   location_department?: string;
   location_room?: string;
   consumables?: EquipmentConsumable[];
+  selected_consumables?: string[]; // IDs выбранных расходников
   attachments?: string[]; // URLs файлов
   desired_resolution_date?: string;
   resolved_at?: string;
@@ -157,6 +158,7 @@ export interface Consumable {
   name: string;
   model?: string;
   category?: string;
+  consumable_type?: string; // cartridge, drum, toner, ink, paper, other
   unit: string; // шт, упак, и т.д.
   quantity_in_stock: number;
   min_quantity: number;
@@ -255,4 +257,6 @@ export interface Notification {
   is_read: boolean;
   created_at: string;
 }
+
+
 

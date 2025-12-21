@@ -120,3 +120,5 @@ SET search_path = public;
 
 Затем проверьте логи в Supabase Dashboard → Logs → Postgres Logs.
 
+
+

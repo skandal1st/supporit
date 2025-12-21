@@ -712,5 +712,34 @@ router.get('/:id/consumables', authenticate, async (req: AuthRequest, res: Respo
   }
 });
 
+// Связать расходник с оборудованием
+router.post('/:id/consumables', authenticate, requireRole('admin', 'it_specialist'), async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { consumable_id, quantity_per_unit = 1 } = req.body;
+
+    if (!consumable_id) {
+      return res.status(400).json({ error: 'ID расходника обязателен' });
+    }
+
+    const result = await pool.query(
+      `INSERT INTO equipment_consumables (equipment_id, consumable_id, quantity_per_unit)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (equipment_id, consumable_id) 
+       DO UPDATE SET quantity_per_unit = $3
+       RETURNING *`,
+      [id, consumable_id, quantity_per_unit]
+    );
+
+    res.json({ data: result.rows[0] });
+  } catch (error: any) {
+    console.error('Ошибка связывания расходника с оборудованием:', error);
+    res.status(500).json({ 
+      error: 'Ошибка при связывании расходника с оборудованием',
+      message: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
 export default router;
 

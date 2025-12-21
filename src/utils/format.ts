@@ -62,3 +62,5 @@ export const getCategoryLabel = (category: EquipmentCategory): string => {
   return labels[category] || category;
 };
 
+
+

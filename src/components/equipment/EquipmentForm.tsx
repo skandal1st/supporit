@@ -58,51 +58,185 @@ const EquipmentCategoryFields = ({
   }, [specData, setValue]);
 
   if (category === 'printer') {
+    const printType = watch('specifications.print_type') || specData.print_type || 'laser';
+    const isColor = watch('specifications.is_color') === 'true' || watch('specifications.is_color') === true || specData.is_color === true || specData.is_color === 'true';
+    const isLaser = printType === 'laser';
+    const cartridgeType = watch('specifications.cartridge_type') || specData.cartridge_type || '';
+
+    // Определяем, какие расходники нужны
+    const needsDrum = isLaser; // Фотобарабан нужен для лазерных принтеров
+    const needsMultipleCartridges = isColor; // Несколько картриджей для цветных принтеров
+
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Тип картриджа
-          </label>
-          <input
-            {...register('specifications.cartridge_type')}
-            name="specifications.cartridge_type"
-            type="text"
-            defaultValue={specData.cartridge_type || ''}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-            placeholder="Например: HP 85A"
-          />
+      <div className="space-y-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Тип печати
+            </label>
+            <select
+              {...register('specifications.print_type')}
+              name="specifications.print_type"
+              defaultValue={specData.print_type || 'laser'}
+              onChange={(e) => {
+                setValue('specifications.print_type', e.target.value);
+              }}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            >
+              <option value="laser">Лазерная</option>
+              <option value="inkjet">Струйная</option>
+              <option value="dot_matrix">Матричная</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Цветная печать
+            </label>
+            <select
+              {...register('specifications.is_color')}
+              name="specifications.is_color"
+              defaultValue={specData.is_color !== undefined ? (specData.is_color ? 'true' : 'false') : 'false'}
+              onChange={(e) => {
+                setValue('specifications.is_color', e.target.value);
+              }}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            >
+              <option value="false">Чёрно-белая</option>
+              <option value="true">Цветная</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Тип картриджа
+            </label>
+            <input
+              {...register('specifications.cartridge_type')}
+              name="specifications.cartridge_type"
+              type="text"
+              defaultValue={specData.cartridge_type || ''}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              placeholder="Например: HP 85A"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Формат бумаги
+            </label>
+            <select
+              {...register('specifications.paper_format')}
+              name="specifications.paper_format"
+              defaultValue={specData.paper_format || 'A4'}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            >
+              <option value="A4">A4</option>
+              <option value="A3">A3</option>
+              <option value="Letter">Letter</option>
+              <option value="Legal">Legal</option>
+            </select>
+          </div>
         </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Формат бумаги
-          </label>
-          <select
-            {...register('specifications.paper_format')}
-            name="specifications.paper_format"
-            defaultValue={specData.paper_format || 'A4'}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-          >
-            <option value="A4">A4</option>
-            <option value="A3">A3</option>
-            <option value="Letter">Letter</option>
-            <option value="Legal">Legal</option>
-          </select>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Тип печати
-          </label>
-          <select
-            {...register('specifications.print_type')}
-            name="specifications.print_type"
-            defaultValue={specData.print_type || 'laser'}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-          >
-            <option value="laser">Лазерная</option>
-            <option value="inkjet">Струйная</option>
-            <option value="dot_matrix">Матричная</option>
-          </select>
+
+        {/* Секция расходников */}
+        <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+          <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+            Расходные материалы для принтера
+          </h3>
+          
+          {/* Фотобарабан для лазерных принтеров */}
+          {needsDrum && (
+            <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Фотобарабан
+              </label>
+              <input
+                {...register('specifications.drum_model')}
+                name="specifications.drum_model"
+                type="text"
+                defaultValue={specData.drum_model || ''}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                placeholder="Например: HP 85A Drum"
+              />
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                Модель фотобарабана для лазерного принтера
+              </p>
+            </div>
+          )}
+
+          {/* Картриджи */}
+          <div className="space-y-3">
+            {needsMultipleCartridges ? (
+              // Цветной принтер - 4 картриджа
+              <>
+                <div className="p-3 bg-cyan-50 dark:bg-cyan-900/20 rounded-lg border border-cyan-200 dark:border-cyan-800">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Картридж чёрный
+                  </label>
+                  <input
+                    {...register('specifications.cartridge_black')}
+                    name="specifications.cartridge_black"
+                    type="text"
+                    defaultValue={specData.cartridge_black || cartridgeType}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    placeholder="Например: HP 85A Black"
+                  />
+                </div>
+                <div className="p-3 bg-cyan-50 dark:bg-cyan-900/20 rounded-lg border border-cyan-200 dark:border-cyan-800">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Картридж голубой (Cyan)
+                  </label>
+                  <input
+                    {...register('specifications.cartridge_cyan')}
+                    name="specifications.cartridge_cyan"
+                    type="text"
+                    defaultValue={specData.cartridge_cyan || ''}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    placeholder="Например: HP 85A Cyan"
+                  />
+                </div>
+                <div className="p-3 bg-magenta-50 dark:bg-magenta-900/20 rounded-lg border border-magenta-200 dark:border-magenta-800">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Картридж пурпурный (Magenta)
+                  </label>
+                  <input
+                    {...register('specifications.cartridge_magenta')}
+                    name="specifications.cartridge_magenta"
+                    type="text"
+                    defaultValue={specData.cartridge_magenta || ''}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    placeholder="Например: HP 85A Magenta"
+                  />
+                </div>
+                <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Картридж жёлтый (Yellow)
+                  </label>
+                  <input
+                    {...register('specifications.cartridge_yellow')}
+                    name="specifications.cartridge_yellow"
+                    type="text"
+                    defaultValue={specData.cartridge_yellow || ''}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    placeholder="Например: HP 85A Yellow"
+                  />
+                </div>
+              </>
+            ) : (
+              // Чёрно-белый принтер - один картридж
+              <div className="p-3 bg-gray-50 dark:bg-gray-900/20 rounded-lg border border-gray-200 dark:border-gray-800">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Картридж чёрный
+                </label>
+                <input
+                  {...register('specifications.cartridge_black')}
+                  name="specifications.cartridge_black"
+                  type="text"
+                  defaultValue={specData.cartridge_black || cartridgeType}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  placeholder="Например: HP 85A"
+                />
+              </div>
+            )}
+          </div>
         </div>
       </div>
     );

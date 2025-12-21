@@ -165,6 +165,7 @@ router.post('/', authenticate, requireRole('admin', 'it_specialist'), async (req
       name,
       model,
       category,
+      consumable_type,
       unit = 'шт',
       quantity_in_stock = 0,
       min_quantity = 0,
@@ -179,14 +180,15 @@ router.post('/', authenticate, requireRole('admin', 'it_specialist'), async (req
 
     const result = await pool.query(
       `INSERT INTO consumables (
-        name, model, category, unit, quantity_in_stock, min_quantity,
+        name, model, category, consumable_type, unit, quantity_in_stock, min_quantity,
         cost_per_unit, supplier, last_purchase_date, created_at, updated_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW())
       RETURNING *`,
       [
         name,
         model || null,
         category || null,
+        consumable_type || null,
         unit,
         quantity_in_stock,
         min_quantity,
@@ -213,7 +215,7 @@ router.put('/:id', authenticate, requireRole('admin', 'it_specialist'), async (r
     const updates = req.body;
 
     const allowedFields = [
-      'name', 'model', 'category', 'unit', 'quantity_in_stock', 'min_quantity',
+      'name', 'model', 'category', 'consumable_type', 'unit', 'quantity_in_stock', 'min_quantity',
       'cost_per_unit', 'supplier', 'last_purchase_date'
     ];
 

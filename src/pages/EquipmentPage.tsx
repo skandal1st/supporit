@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Plus, Search, Edit, Trash2 } from 'lucide-react';
 import { equipmentService, type EquipmentFilters } from '../services/equipment.service';
+import { consumablesService } from '../services/consumables.service';
 import type { Equipment, EquipmentStatus } from '../types';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
@@ -87,19 +88,101 @@ export const EquipmentPage = () => {
     
     console.log('Данные для отправки:', submitData);
 
+    let createdEquipmentId: string | null = null;
+
     if (editingEquipment) {
-      const { error } = await equipmentService.updateEquipment(editingEquipment.id, submitData);
+      const { data: updatedEquipment, error } = await equipmentService.updateEquipment(editingEquipment.id, submitData);
       if (error) {
         alert('Ошибка при обновлении: ' + error.message);
         return;
       }
+      createdEquipmentId = updatedEquipment?.id || null;
     } else {
-      const { error } = await equipmentService.createEquipment(submitData);
+      const { data: newEquipment, error } = await equipmentService.createEquipment(submitData);
       if (error) {
         alert('Ошибка при создании: ' + error.message);
         return;
       }
+      createdEquipmentId = newEquipment?.id || null;
     }
+
+    // Если это принтер и есть данные о расходниках, создаем их и связываем с оборудованием
+    if (createdEquipmentId && submitData.category === 'printer' && submitData.specifications) {
+      const specs = submitData.specifications;
+      const printType = specs.print_type;
+      const isColor = specs.is_color === true || specs.is_color === 'true';
+      const isLaser = printType === 'laser';
+
+      try {
+        // Создаем фотобарабан для лазерных принтеров
+        if (isLaser && specs.drum_model) {
+          const { data: drum, error: drumError } = await consumablesService.createConsumable({
+            name: `Фотобарабан ${specs.drum_model}`,
+            model: specs.drum_model,
+            category: 'printer_consumable',
+            consumable_type: 'drum',
+            unit: 'шт',
+            quantity_in_stock: 0,
+            min_quantity: 1,
+          });
+
+          if (!drumError && drum) {
+            await equipmentService.linkConsumableToEquipment(createdEquipmentId, drum.id, 1);
+          }
+        }
+
+        // Создаем картриджи
+        if (isColor) {
+          // Цветной принтер - 4 картриджа
+          const cartridges = [
+            { key: 'cartridge_black', name: 'Картридж чёрный', model: specs.cartridge_black },
+            { key: 'cartridge_cyan', name: 'Картридж голубой', model: specs.cartridge_cyan },
+            { key: 'cartridge_magenta', name: 'Картридж пурпурный', model: specs.cartridge_magenta },
+            { key: 'cartridge_yellow', name: 'Картридж жёлтый', model: specs.cartridge_yellow },
+          ];
+
+          for (const cartridge of cartridges) {
+            if (cartridge.model) {
+              const { data: consumable, error: consumableError } = await consumablesService.createConsumable({
+                name: cartridge.name,
+                model: cartridge.model,
+                category: 'printer_consumable',
+                consumable_type: 'cartridge',
+                unit: 'шт',
+                quantity_in_stock: 0,
+                min_quantity: 1,
+              });
+
+              if (!consumableError && consumable) {
+                await equipmentService.linkConsumableToEquipment(createdEquipmentId, consumable.id, 1);
+              }
+            }
+          }
+        } else {
+          // Чёрно-белый принтер - один картридж
+          if (specs.cartridge_black || specs.cartridge_type) {
+            const cartridgeModel = specs.cartridge_black || specs.cartridge_type;
+            const { data: consumable, error: consumableError } = await consumablesService.createConsumable({
+              name: 'Картридж чёрный',
+              model: cartridgeModel,
+              category: 'printer_consumable',
+              consumable_type: 'cartridge',
+              unit: 'шт',
+              quantity_in_stock: 0,
+              min_quantity: 1,
+            });
+
+            if (!consumableError && consumable) {
+              await equipmentService.linkConsumableToEquipment(createdEquipmentId, consumable.id, 1);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Ошибка при создании расходников:', error);
+        // Не прерываем выполнение, просто логируем ошибку
+      }
+    }
+
     setIsModalOpen(false);
     setEditingEquipment(undefined);
     loadEquipment();

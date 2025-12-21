@@ -200,5 +200,62 @@ router.put('/:id', authenticate, requireRole('admin', 'it_specialist'), async (r
   }
 });
 
+// Удалить пользователя (только admin)
+router.delete('/:id', authenticate, requireRole('admin'), async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    // Нельзя удалить самого себя
+    if (id === req.userId) {
+      return res.status(400).json({ error: 'Нельзя удалить самого себя' });
+    }
+
+    // Проверяем существование пользователя
+    const existingResult = await pool.query('SELECT * FROM users WHERE id = $1', [id]);
+    if (existingResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Пользователь не найден' });
+    }
+
+    const existingUser = existingResult.rows[0];
+
+    // Проверяем, что не удаляем последнего администратора
+    if (existingUser.role === 'admin') {
+      const adminCount = await pool.query(
+        "SELECT COUNT(*) as count FROM users WHERE role = 'admin'"
+      );
+      if (parseInt(adminCount.rows[0].count) <= 1) {
+        return res.status(400).json({ 
+          error: 'Невозможно удалить последнего администратора' 
+        });
+      }
+    }
+
+    // Удаляем пользователя
+    const result = await pool.query('DELETE FROM users WHERE id = $1 RETURNING id, email, full_name, role', [id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Пользователь не найден' });
+    }
+
+    res.json({ message: 'Пользователь успешно удален', data: result.rows[0] });
+  } catch (error: any) {
+    console.error('Ошибка удаления пользователя:', error);
+    
+    // Проверка на внешние ключи
+    if (error.code === '23503') {
+      return res.status(400).json({ 
+        error: 'Невозможно удалить пользователя: он используется в системе' 
+      });
+    }
+    
+    res.status(500).json({ 
+      error: 'Ошибка при удалении пользователя',
+      message: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
 export default router;
+
+
 

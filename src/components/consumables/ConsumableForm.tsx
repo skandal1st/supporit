@@ -9,6 +9,7 @@ const consumableSchema = z.object({
   name: z.string().min(1, 'Название обязательно'),
   model: z.string().optional(),
   category: z.string().optional(),
+  consumable_type: z.string().optional(),
   unit: z.string().min(1, 'Единица измерения обязательна'),
   quantity_in_stock: z.number().min(0, 'Количество не может быть отрицательным'),
   min_quantity: z.number().min(0, 'Минимальное количество не может быть отрицательным'),
@@ -39,6 +40,7 @@ export const ConsumableForm = ({ consumable, onSubmit, onCancel, loading }: Cons
           name: consumable.name,
           model: consumable.model || '',
           category: consumable.category || '',
+          consumable_type: (consumable as any).consumable_type || '',
           unit: consumable.unit,
           quantity_in_stock: consumable.quantity_in_stock,
           min_quantity: consumable.min_quantity,
@@ -59,6 +61,7 @@ export const ConsumableForm = ({ consumable, onSubmit, onCancel, loading }: Cons
         name: consumable.name,
         model: consumable.model || '',
         category: consumable.category || '',
+        consumable_type: (consumable as any).consumable_type || '',
         unit: consumable.unit,
         quantity_in_stock: consumable.quantity_in_stock,
         min_quantity: consumable.min_quantity,
@@ -109,6 +112,24 @@ export const ConsumableForm = ({ consumable, onSubmit, onCancel, loading }: Cons
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
             placeholder="Например: printer_cartridge"
           />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Тип расходника
+          </label>
+          <select
+            {...register('consumable_type')}
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+          >
+            <option value="">Не указан</option>
+            <option value="cartridge">Картридж</option>
+            <option value="drum">Фотобарабан</option>
+            <option value="toner">Тонер</option>
+            <option value="ink">Чернила</option>
+            <option value="paper">Бумага</option>
+            <option value="other">Прочее</option>
+          </select>
         </div>
 
         <div>
@@ -211,5 +232,6 @@ export const ConsumableForm = ({ consumable, onSubmit, onCancel, loading }: Cons
     </form>
   );
 };
+
 
 

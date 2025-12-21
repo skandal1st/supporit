@@ -1,4 +1,4 @@
-import { get, put, post } from '../lib/api';
+import { get, put, post, del } from '../lib/api';
 import type { User } from '../types';
 
 export interface CreateUserData {
@@ -69,6 +69,21 @@ export const usersService = {
       return { data: data.data, error: null };
     } catch (error) {
       return { data: null, error: error as Error };
+    }
+  },
+
+  // Удалить пользователя
+  async deleteUser(id: string): Promise<{ error: Error | null }> {
+    try {
+      const { error } = await del(`/users/${id}`);
+
+      if (error) {
+        return { error: error };
+      }
+
+      return { error: null };
+    } catch (error) {
+      return { error: error as Error };
     }
   },
 };

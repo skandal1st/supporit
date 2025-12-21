@@ -102,3 +102,5 @@ async getEquipment(filters?: EquipmentFilters, page = 1, pageSize = 20): Promise
 
 Это поможет определить, в чём именно проблема - в запросе, фильтрах или загрузке связанных данных.
 
+
+

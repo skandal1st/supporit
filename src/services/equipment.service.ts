@@ -198,5 +198,27 @@ export const equipmentService = {
       return { data: [], error: error as Error };
     }
   },
+
+  // Связать расходник с оборудованием
+  async linkConsumableToEquipment(
+    equipmentId: string,
+    consumableId: string,
+    quantityPerUnit: number = 1
+  ): Promise<{ data: any | null; error: Error | null }> {
+    try {
+      const { data, error } = await post<{ data: any }>(`/equipment/${equipmentId}/consumables`, {
+        consumable_id: consumableId,
+        quantity_per_unit: quantityPerUnit,
+      });
+
+      if (error || !data) {
+        return { data: null, error: error || new Error('Ошибка связывания расходника с оборудованием') };
+      }
+
+      return { data: data.data, error: null };
+    } catch (error) {
+      return { data: null, error: error as Error };
+    }
+  },
 };
 
