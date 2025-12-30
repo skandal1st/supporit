@@ -240,6 +240,7 @@ router.post('/', authenticate, requireRole('admin', 'it_specialist'), async (req
       location_department,
       location_room,
       manufacturer,
+      ip_address,
       specifications,
       attachments,
     } = req.body;
@@ -291,9 +292,9 @@ router.post('/', authenticate, requireRole('admin', 'it_specialist'), async (req
       `INSERT INTO equipment (
         name, model, inventory_number, serial_number, category, status,
         purchase_date, cost, warranty_until, current_owner_id,
-        location_department, location_room, manufacturer, specifications,
+        location_department, location_room, manufacturer, ip_address, specifications,
         attachments, created_at, updated_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15::jsonb, NOW(), NOW())
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16::jsonb, NOW(), NOW())
       RETURNING *`,
       [
         name,
@@ -309,6 +310,7 @@ router.post('/', authenticate, requireRole('admin', 'it_specialist'), async (req
         cleanValue(location_department),
         cleanValue(location_room),
         cleanValue(manufacturer),
+        cleanValue(ip_address),
         cleanSpecifications,
         attachments && Array.isArray(attachments) ? attachments : null,
       ]
@@ -381,7 +383,7 @@ router.put('/:id', authenticate, requireRole('admin', 'it_specialist'), async (r
     const allowedFields = [
       'name', 'model', 'inventory_number', 'serial_number', 'category', 'status',
       'purchase_date', 'cost', 'warranty_until', 'current_owner_id',
-      'location_department', 'location_room', 'manufacturer', 'specifications', 'attachments'
+      'location_department', 'location_room', 'manufacturer', 'ip_address', 'specifications', 'attachments'
     ];
 
     // Формируем динамический запрос
