@@ -91,14 +91,21 @@ export const ZabbixStatus = ({ equipmentId, category, ipAddress, compact = false
         snmpCommunity
       );
 
+      console.log('Zabbix add response:', { data, error: err });
+
       if (err) {
         alert('Ошибка: ' + err.message);
       } else if (data?.success) {
+        alert('Устройство успешно добавлено в Zabbix');
         setShowAddModal(false);
         loadStatus(); // Перезагружаем статус
+      } else {
+        // Если нет success, показываем сообщение об ошибке
+        alert('Ошибка: ' + (data?.message || 'Не удалось добавить устройство в Zabbix'));
       }
-    } catch (e) {
-      alert('Ошибка добавления в Zabbix');
+    } catch (e: any) {
+      console.error('Zabbix add error:', e);
+      alert('Ошибка добавления в Zabbix: ' + (e?.message || 'Неизвестная ошибка'));
     } finally {
       setAdding(false);
     }
