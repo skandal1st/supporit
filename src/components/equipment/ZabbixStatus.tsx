@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Wifi, WifiOff, Plus, RefreshCw, FileText, AlertCircle } from 'lucide-react';
+import { Wifi, WifiOff, RefreshCw, FileText, AlertCircle } from 'lucide-react';
 import { zabbixService } from '../../services/zabbix.service';
-import type { ZabbixEquipmentStatus, ZabbixEquipmentCounters, ZabbixGroup, ZabbixTemplate } from '../../types';
-import { Button } from '../ui/Button';
+import type { ZabbixEquipmentStatus, ZabbixEquipmentCounters } from '../../types';
 
 interface ZabbixStatusProps {
   equipmentId: string;
@@ -16,15 +15,6 @@ export const ZabbixStatus = ({ equipmentId, category, ipAddress, compact = false
   const [counters, setCounters] = useState<ZabbixEquipmentCounters | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  // Состояние для модального окна добавления
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [groups, setGroups] = useState<ZabbixGroup[]>([]);
-  const [templates, setTemplates] = useState<ZabbixTemplate[]>([]);
-  const [selectedGroup, setSelectedGroup] = useState('');
-  const [selectedTemplate, setSelectedTemplate] = useState('');
-  const [snmpCommunity, setSnmpCommunity] = useState('public');
-  const [adding, setAdding] = useState(false);
 
   const loadStatus = async () => {
     setLoading(true);
@@ -60,56 +50,6 @@ export const ZabbixStatus = ({ equipmentId, category, ipAddress, compact = false
       setStatus({ found: false, reason: 'no_ip', message: 'IP не указан' });
     }
   }, [equipmentId, ipAddress, category]);
-
-  const loadGroupsAndTemplates = async () => {
-    const [groupsResult, templatesResult] = await Promise.all([
-      zabbixService.getGroups(),
-      zabbixService.getTemplates('printer'),
-    ]);
-
-    if (groupsResult.data) setGroups(groupsResult.data);
-    if (templatesResult.data) setTemplates(templatesResult.data);
-  };
-
-  const handleOpenAddModal = async () => {
-    setShowAddModal(true);
-    await loadGroupsAndTemplates();
-  };
-
-  const handleAddToZabbix = async () => {
-    if (!selectedGroup) {
-      alert('Выберите группу хостов');
-      return;
-    }
-
-    setAdding(true);
-    try {
-      const { data, error: err } = await zabbixService.addEquipmentToZabbix(
-        equipmentId,
-        selectedGroup,
-        selectedTemplate || undefined,
-        snmpCommunity
-      );
-
-      console.log('Zabbix add response:', { data, error: err });
-
-      if (err) {
-        alert('Ошибка: ' + err.message);
-      } else if (data?.success) {
-        alert('Устройство успешно добавлено в Zabbix');
-        setShowAddModal(false);
-        loadStatus(); // Перезагружаем статус
-      } else {
-        // Если нет success, показываем сообщение об ошибке
-        alert('Ошибка: ' + (data?.message || 'Не удалось добавить устройство в Zabbix'));
-      }
-    } catch (e: any) {
-      console.error('Zabbix add error:', e);
-      alert('Ошибка добавления в Zabbix: ' + (e?.message || 'Неизвестная ошибка'));
-    } finally {
-      setAdding(false);
-    }
-  };
 
   // Компактный вид для таблицы
   if (compact) {
@@ -184,14 +124,8 @@ export const ZabbixStatus = ({ equipmentId, category, ipAddress, compact = false
           Для мониторинга укажите IP-адрес устройства
         </div>
       ) : !status?.found ? (
-        <div className="space-y-3">
-          <div className="text-sm text-yellow-600 dark:text-yellow-400">
-            Устройство не найдено в Zabbix
-          </div>
-          <Button size="sm" onClick={handleOpenAddModal}>
-            <Plus className="h-4 w-4 mr-1" />
-            Добавить в Zabbix
-          </Button>
+        <div className="text-sm text-yellow-600 dark:text-yellow-400">
+          Устройство не найдено в Zabbix
         </div>
       ) : (
         <div className="space-y-3">
@@ -248,83 +182,6 @@ export const ZabbixStatus = ({ equipmentId, category, ipAddress, compact = false
               </div>
             </div>
           )}
-        </div>
-      )}
-
-      {/* Модальное окно добавления в Zabbix */}
-      {showAddModal && (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
-          <div className="flex items-center justify-center min-h-screen px-4">
-            <div
-              className="fixed inset-0 bg-gray-500 bg-opacity-75"
-              onClick={() => setShowAddModal(false)}
-            />
-            <div className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                Добавить в Zabbix
-              </h3>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Группа хостов *
-                  </label>
-                  <select
-                    value={selectedGroup}
-                    onChange={(e) => setSelectedGroup(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                  >
-                    <option value="">Выберите группу</option>
-                    {groups.map((group) => (
-                      <option key={group.groupid} value={group.groupid}>
-                        {group.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Шаблон (опционально)
-                  </label>
-                  <select
-                    value={selectedTemplate}
-                    onChange={(e) => setSelectedTemplate(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                  >
-                    <option value="">Без шаблона</option>
-                    {templates.map((template) => (
-                      <option key={template.templateid} value={template.templateid}>
-                        {template.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    SNMP Community
-                  </label>
-                  <input
-                    type="text"
-                    value={snmpCommunity}
-                    onChange={(e) => setSnmpCommunity(e.target.value)}
-                    placeholder="public"
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                  />
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-3 mt-6">
-                <Button variant="secondary" onClick={() => setShowAddModal(false)}>
-                  Отмена
-                </Button>
-                <Button onClick={handleAddToZabbix} loading={adding}>
-                  Добавить
-                </Button>
-              </div>
-            </div>
-          </div>
         </div>
       )}
     </div>
