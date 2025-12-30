@@ -174,8 +174,11 @@ router.get('/equipment/:id/counters', authenticate, async (req, res) => {
       });
     }
 
-    // Получаем счётчики страниц
-    const counters = await zabbixService.getPageCounters(host.hostid);
+    // Получаем счётчики страниц и уровень расходников
+    const [counters, suppliesData] = await Promise.all([
+      zabbixService.getPageCounters(host.hostid),
+      zabbixService.getSuppliesLevels(host.hostid),
+    ]);
 
     res.json({
       supported: true,
@@ -187,7 +190,8 @@ router.get('/equipment/:id/counters', authenticate, async (req, res) => {
         black: counters.black,
         color: counters.color,
       },
-      rawItems: counters.items,
+      supplies: suppliesData.supplies,
+      rawItems: [...counters.items, ...suppliesData.items],
     });
   } catch (error) {
     console.error('Ошибка получения счётчиков страниц:', error);

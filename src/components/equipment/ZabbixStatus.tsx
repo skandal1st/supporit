@@ -1,7 +1,22 @@
 import { useState, useEffect } from 'react';
-import { Wifi, WifiOff, RefreshCw, FileText, AlertCircle } from 'lucide-react';
+import { Wifi, WifiOff, RefreshCw, FileText, AlertCircle, Droplets } from 'lucide-react';
 import { zabbixService } from '../../services/zabbix.service';
 import type { ZabbixEquipmentStatus, ZabbixEquipmentCounters } from '../../types';
+
+// Цвета для расходников
+const supplyColors: Record<string, string> = {
+  black: 'bg-gray-800',
+  cyan: 'bg-cyan-500',
+  magenta: 'bg-pink-500',
+  yellow: 'bg-yellow-400',
+};
+
+const getSupplyColorClass = (color?: string): string => {
+  if (color && supplyColors[color]) {
+    return supplyColors[color];
+  }
+  return 'bg-blue-500';
+};
 
 interface ZabbixStatusProps {
   equipmentId: string;
@@ -179,6 +194,48 @@ export const ZabbixStatus = ({ equipmentId, category, ipAddress, compact = false
                     </div>
                   </div>
                 )}
+              </div>
+            </div>
+          )}
+
+          {/* Уровень расходников (тонер/чернила) */}
+          {category === 'printer' && counters?.found && counters.supplies && counters.supplies.length > 0 && (
+            <div className="bg-gray-50 dark:bg-gray-900 rounded p-3">
+              <div className="flex items-center gap-2 mb-3">
+                <Droplets className="h-4 w-4 text-gray-500" />
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Уровень расходников
+                </span>
+              </div>
+              <div className="space-y-2">
+                {counters.supplies.map((supply, index) => {
+                  const percent = supply.percent ?? (supply.level !== null && supply.maxLevel !== null
+                    ? Math.round((supply.level / supply.maxLevel) * 100)
+                    : null);
+
+                  return (
+                    <div key={index} className="space-y-1">
+                      <div className="flex justify-between text-xs">
+                        <span className="text-gray-600 dark:text-gray-400 truncate max-w-[150px]" title={supply.name}>
+                          {supply.color ? supply.color.charAt(0).toUpperCase() + supply.color.slice(1) : supply.name}
+                        </span>
+                        {percent !== null && (
+                          <span className="text-gray-700 dark:text-gray-300 font-medium">
+                            {percent}%
+                          </span>
+                        )}
+                      </div>
+                      {percent !== null && (
+                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                          <div
+                            className={`h-2 rounded-full ${getSupplyColorClass(supply.color)}`}
+                            style={{ width: `${Math.min(100, Math.max(0, percent))}%` }}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}

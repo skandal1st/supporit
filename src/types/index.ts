@@ -304,6 +304,14 @@ export interface ZabbixEquipmentStatus {
   ip?: string;
 }
 
+export interface ZabbixSupply {
+  name: string;
+  level: number | null;
+  maxLevel: number | null;
+  percent: number | null;
+  color?: string;
+}
+
 export interface ZabbixEquipmentCounters {
   supported: boolean;
   found: boolean;
@@ -312,6 +320,7 @@ export interface ZabbixEquipmentCounters {
   hostid?: string;
   hostname?: string;
   counters?: ZabbixPageCounters;
+  supplies?: ZabbixSupply[];
 }
 
 
