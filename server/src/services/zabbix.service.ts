@@ -82,7 +82,7 @@ async function zabbixRequest<T>(method: string, params: Record<string, any> = {}
     throw new Error(`Zabbix API error: ${response.status} ${response.statusText}`);
   }
 
-  const data: ZabbixResponse<T> = await response.json();
+  const data = await response.json() as ZabbixResponse<T>;
 
   if (data.error) {
     throw new Error(`Zabbix API error: ${data.error.message} - ${data.error.data}`);

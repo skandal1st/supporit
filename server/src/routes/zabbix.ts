@@ -1,7 +1,7 @@
 import { Router } from 'express';
-import { authenticate, requireRole } from '../middleware/auth';
-import { zabbixService } from '../services/zabbix.service';
-import pool from '../config/database';
+import { authenticate, requireRole } from '../middleware/auth.js';
+import { zabbixService } from '../services/zabbix.service.js';
+import { pool } from '../config/database.js';
 
 const router = Router();
 
@@ -231,7 +231,7 @@ router.get('/templates', authenticate, async (req, res) => {
 router.post(
   '/equipment/:id/add',
   authenticate,
-  requireRole(['admin', 'it_specialist']),
+  requireRole('admin', 'it_specialist'),
   async (req, res) => {
     try {
       const { id } = req.params;

@@ -8,14 +8,14 @@ const router = Router();
 router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
   try {
     const { active } = req.query;
-    const user = req.user;
+    const userRole = req.userRole;
 
     let query = 'SELECT * FROM buildings WHERE 1=1';
     const params: any[] = [];
 
     // Если не админ, показываем только активные здания
     // Если запрошены только активные, показываем только их
-    if (active === 'true' || user?.role !== 'admin') {
+    if (active === 'true' || userRole !== 'admin') {
       query += ' AND is_active = true';
     }
 

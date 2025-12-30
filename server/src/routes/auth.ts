@@ -1,9 +1,14 @@
 import { Router, Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
+import jwt, { SignOptions } from 'jsonwebtoken';
 import { pool } from '../config/database.js';
 import { authenticate, AuthRequest } from '../middleware/auth.js';
 import { z } from 'zod';
+
+// JWT options
+const jwtOptions: SignOptions = {
+  expiresIn: (process.env.JWT_EXPIRES_IN || '7d') as string,
+};
 
 const router = Router();
 
@@ -50,7 +55,7 @@ router.post('/signup', async (req: Request, res: Response) => {
     const token = jwt.sign(
       { userId: user.id, email: user.email, role: user.role },
       process.env.JWT_SECRET || '',
-      { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+      jwtOptions
     );
 
     res.status(201).json({
@@ -106,7 +111,7 @@ router.post('/signin', async (req: Request, res: Response) => {
     const token = jwt.sign(
       { userId: user.id, email: user.email, role: user.role },
       process.env.JWT_SECRET || '',
-      { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+      jwtOptions
     );
 
     res.json({
@@ -170,71 +175,7 @@ router.post('/set-password', async (req: Request, res: Response) => {
     const token = jwt.sign(
       { userId: user.id, email: user.email, role: user.role },
       process.env.JWT_SECRET || '',
-      { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
-    );
-
-    res.json({
-      user: {
-        id: user.id,
-        email: user.email,
-        full_name: user.full_name,
-        role: user.role,
-        department: user.department,
-        position: user.position,
-        phone: user.phone,
-        avatar_url: user.avatar_url,
-        created_at: user.created_at,
-        updated_at: user.updated_at,
-      },
-      token,
-    });
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return res.status(400).json({ error: 'Неверные данные', details: error.errors });
-    }
-    console.error('Ошибка установки пароля:', error);
-    res.status(500).json({ error: 'Ошибка при установке пароля' });
-  }
-});
-
-// Установить пароль при первом входе
-router.post('/set-password', async (req: Request, res: Response) => {
-  try {
-    const { email, password } = z.object({
-      email: z.string().email(),
-      password: z.string().min(6, 'Пароль должен содержать минимум 6 символов'),
-    }).parse(req.body);
-
-    // Находим пользователя
-    const result = await pool.query(
-      'SELECT * FROM users WHERE email = $1',
-      [email]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Пользователь не найден' });
-    }
-
-    const user = result.rows[0];
-
-    // Проверяем, что пароль еще не установлен
-    if (user.password_hash) {
-      return res.status(400).json({ error: 'Пароль уже установлен' });
-    }
-
-    // Хешируем и сохраняем пароль
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    await pool.query(
-      'UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2',
-      [hashedPassword, user.id]
-    );
-
-    // Генерируем JWT токен для автоматического входа
-    const token = jwt.sign(
-      { userId: user.id, email: user.email, role: user.role },
-      process.env.JWT_SECRET || '',
-      { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+      jwtOptions
     );
 
     res.json({
