@@ -1,5 +1,5 @@
 import { get, post, put, del } from '../lib/api';
-import type { Ticket, TicketCategory, TicketPriority, TicketStatus, Equipment, EquipmentConsumable } from '../types';
+import type { Ticket, TicketCategory, TicketPriority, TicketStatus } from '../types';
 
 export interface TicketFilters {
   status?: TicketStatus;

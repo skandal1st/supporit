@@ -39,7 +39,6 @@ export const LoginForm = ({ onSuccess }: LoginFormProps) => {
     register,
     handleSubmit,
     formState: { errors },
-    watch,
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
   });

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Search, Edit, Eye, Filter, CheckCircle, Clock, XCircle } from 'lucide-react';
+import { Plus, Search, Edit, Eye, CheckCircle, Clock, XCircle } from 'lucide-react';
 import { ticketsService, type TicketFilters } from '../services/tickets.service';
 import type { Ticket, TicketStatus, TicketPriority, TicketCategory } from '../types';
 import { Button } from '../components/ui/Button';
@@ -159,7 +159,7 @@ export const TicketsPage = () => {
       if (ticket && !ticket.resolved_at) {
         updateData.resolved_at = new Date().toISOString();
       }
-    } else if (newStatus !== 'resolved' && newStatus !== 'closed') {
+    } else {
       // При переходе обратно в работу сбрасываем даты закрытия
       updateData.resolved_at = null;
       updateData.closed_at = null;

@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react';
-import { 
-  Package, 
-  Ticket, 
+import {
+  Package,
+  Ticket,
   AlertCircle,
-  TrendingUp,
   Clock,
   CheckCircle
 } from 'lucide-react';
@@ -54,7 +53,7 @@ export const DashboardPage = () => {
           allEquipment,
           inUseEquipment,
           inRepairEquipment,
-          allTickets,
+          _allTickets,
           activeTickets,
           inProgressTickets,
           resolvedTickets,
@@ -191,29 +190,6 @@ export const DashboardPage = () => {
                     <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                       {stat.subtitle}
                     </p>
-                  )}
-                  {stat.change && (
-                    <div className="flex items-center mt-2">
-                      <TrendingUp
-                        className={`h-4 w-4 mr-1 ${
-                          stat.changeType === 'positive'
-                            ? 'text-green-500'
-                            : 'text-red-500'
-                        }`}
-                      />
-                      <span
-                        className={`text-sm font-medium ${
-                          stat.changeType === 'positive'
-                            ? 'text-green-600 dark:text-green-400'
-                            : 'text-red-600 dark:text-red-400'
-                        }`}
-                      >
-                        {stat.change}
-                      </span>
-                      <span className="text-sm text-gray-500 dark:text-gray-400 ml-1">
-                        с прошлого месяца
-                      </span>
-                    </div>
                   )}
                 </div>
                 <div className={`${stat.color} p-3 rounded-lg`}>

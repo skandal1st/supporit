@@ -100,8 +100,8 @@ export const UserForm = ({ user, onSubmit, onCancel, loading }: UserFormProps) =
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 placeholder="user@example.com"
               />
-              {errors.email && (
-                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.email.message}</p>
+              {(errors as any).email && (
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{(errors as any).email.message}</p>
               )}
             </div>
 
@@ -115,8 +115,8 @@ export const UserForm = ({ user, onSubmit, onCancel, loading }: UserFormProps) =
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 placeholder="Оставьте пустым, чтобы пользователь установил пароль при первом входе"
               />
-              {errors.password && (
-                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.password.message}</p>
+              {(errors as any).password && (
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{(errors as any).password.message}</p>
               )}
               <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                 Если пароль не указан, пользователь сможет установить его при первом входе в систему

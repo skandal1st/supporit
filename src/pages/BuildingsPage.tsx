@@ -102,7 +102,8 @@ export const BuildingsPage = () => {
           </p>
         </div>
         {canManage && (
-          <Button onClick={handleCreate} icon={Plus}>
+          <Button onClick={handleCreate}>
+            <Plus className="h-5 w-5 mr-2" />
             Добавить здание
           </Button>
         )}

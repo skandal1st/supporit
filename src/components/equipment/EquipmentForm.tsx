@@ -353,7 +353,6 @@ export const EquipmentForm = ({ equipment, onSubmit, onCancel, loading }: Equipm
     formState: { errors },
     reset,
     watch,
-    getValues,
     setValue,
   } = useForm<EquipmentFormData>({
     resolver: zodResolver(equipmentSchema),
@@ -450,7 +449,7 @@ export const EquipmentForm = ({ equipment, onSubmit, onCancel, loading }: Equipm
       // Устанавливаем значения specifications в форму
       if (equipment.specifications && typeof equipment.specifications === 'object') {
         Object.keys(equipment.specifications).forEach((key) => {
-          formData[`specifications.${key}`] = equipment.specifications[key];
+          formData[`specifications.${key}`] = equipment.specifications![key];
         });
       }
 

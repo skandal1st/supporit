@@ -1,11 +1,10 @@
 import { NavLink } from 'react-router-dom';
-import { 
-  LayoutDashboard, 
-  Package, 
-  Ticket, 
-  Users, 
-  FileText, 
-  Settings, 
+import {
+  LayoutDashboard,
+  Package,
+  Ticket,
+  Users,
+  FileText,
   LogOut,
   Menu,
   X,
@@ -14,7 +13,7 @@ import {
 } from 'lucide-react';
 import { useAuthStore } from '../../store/auth.store';
 import { useNavigate } from 'react-router-dom';
-import { canManageEquipment, canViewReports, canManageUsers } from '../../utils/permissions';
+import { canViewReports, canManageUsers } from '../../utils/permissions';
 import { useState } from 'react';
 import type { UserRole } from '../../types';
 

@@ -142,13 +142,13 @@ export const authService = {
   },
 
   // Сброс пароля (заглушка)
-  async resetPassword(email: string) {
+  async resetPassword(_email: string) {
     // TODO: Реализовать на бэкенде
     return { error: new Error('Функция в разработке') };
   },
 
   // Обновить пароль (заглушка)
-  async updatePassword(newPassword: string) {
+  async updatePassword(_newPassword: string) {
     // TODO: Реализовать на бэкенде
     return { error: new Error('Функция в разработке') };
   },

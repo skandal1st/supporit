@@ -133,7 +133,6 @@ export const TicketForm = ({ ticket, onSubmit, onCancel, loading }: TicketFormPr
       
       // Сбрасываем выбранное оборудование при смене кабинета ТОЛЬКО если это новый тикет
       // Не сбрасываем, если это просмотр существующего тикета с уже выбранным оборудованием
-      const currentEquipmentId = watch('equipment_id');
       if (!ticket || !ticket.equipment_id) {
         // Только для новых тикетов или тикетов без оборудования
         reset({ ...watch(), equipment_id: null });
@@ -481,7 +480,9 @@ export const TicketForm = ({ ticket, onSubmit, onCancel, loading }: TicketFormPr
                           </label>
                           <div className="flex items-center gap-2 ml-4">
                             {consumable.is_low_stock && (
-                              <AlertCircle className="h-4 w-4 text-yellow-500" title="Низкий остаток" />
+                              <span title="Низкий остаток">
+                                <AlertCircle className="h-4 w-4 text-yellow-500" />
+                              </span>
                             )}
                             <span className={`font-medium text-xs ${consumable.is_low_stock ? 'text-yellow-600 dark:text-yellow-400' : 'text-blue-700 dark:text-blue-300'}`}>
                               В наличии: {consumable.quantity_in_stock} {consumable.min_quantity > 0 && `(мин: ${consumable.min_quantity})`}

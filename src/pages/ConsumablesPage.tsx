@@ -118,7 +118,8 @@ export const ConsumablesPage = () => {
           </p>
         </div>
         {canManage && activeTab === 'list' && (
-          <Button onClick={handleCreate} icon={Plus}>
+          <Button onClick={handleCreate}>
+            <Plus className="h-5 w-5 mr-2" />
             Добавить расходник
           </Button>
         )}
