@@ -1,14 +1,14 @@
 import { Router, Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
-import jwt, { SignOptions } from 'jsonwebtoken';
+import jwt from 'jsonwebtoken';
 import { pool } from '../config/database.js';
 import { authenticate, AuthRequest } from '../middleware/auth.js';
 import { z } from 'zod';
 
-// JWT options
-const jwtOptions: SignOptions = {
-  expiresIn: (process.env.JWT_EXPIRES_IN || '7d') as string,
-};
+// JWT expiration time in seconds (default 7 days)
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN
+  ? parseInt(process.env.JWT_EXPIRES_IN, 10) || 604800
+  : 604800;
 
 const router = Router();
 
@@ -55,7 +55,7 @@ router.post('/signup', async (req: Request, res: Response) => {
     const token = jwt.sign(
       { userId: user.id, email: user.email, role: user.role },
       process.env.JWT_SECRET || '',
-      jwtOptions
+      { expiresIn: JWT_EXPIRES_IN }
     );
 
     res.status(201).json({
@@ -111,7 +111,7 @@ router.post('/signin', async (req: Request, res: Response) => {
     const token = jwt.sign(
       { userId: user.id, email: user.email, role: user.role },
       process.env.JWT_SECRET || '',
-      jwtOptions
+      { expiresIn: JWT_EXPIRES_IN }
     );
 
     res.json({
@@ -175,7 +175,7 @@ router.post('/set-password', async (req: Request, res: Response) => {
     const token = jwt.sign(
       { userId: user.id, email: user.email, role: user.role },
       process.env.JWT_SECRET || '',
-      jwtOptions
+      { expiresIn: JWT_EXPIRES_IN }
     );
 
     res.json({
