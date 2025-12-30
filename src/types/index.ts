@@ -55,6 +55,7 @@ export interface Equipment {
   location_department?: string;
   location_room?: string;
   manufacturer?: string;
+  ip_address?: string;
   specifications?: Record<string, any>;
   attachments?: string[]; // URLs файлов
   qr_code?: string;

@@ -385,6 +385,8 @@ export const EquipmentPage = () => {
         }}
         title={editingEquipment ? 'Редактирование оборудования' : 'Добавление оборудования'}
         size="xl"
+        confirmClose
+        confirmMessage="Вы уверены, что хотите закрыть окно? Несохранённые данные оборудования будут потеряны."
       >
         <EquipmentForm
           equipment={editingEquipment}

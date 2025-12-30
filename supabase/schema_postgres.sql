@@ -44,6 +44,7 @@ CREATE TABLE IF NOT EXISTS equipment (
   location_department TEXT,
   location_room TEXT,
   manufacturer TEXT,
+  ip_address TEXT,
   specifications JSONB,
   attachments TEXT[],
   qr_code TEXT,

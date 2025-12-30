@@ -300,9 +300,9 @@ export const TicketsPage = () => {
             <TableBody>
               {tickets.map((ticket) => (
                 <TableRow key={ticket.id}>
-                  <TableCell>
+                  <TableCell className="max-w-xs whitespace-normal">
                     <div>
-                      <div className="font-medium">{ticket.title}</div>
+                      <div className="font-medium truncate">{ticket.title}</div>
                       <div className="text-sm text-gray-500 dark:text-gray-400 line-clamp-2">
                         {ticket.description}
                       </div>
@@ -480,6 +480,8 @@ export const TicketsPage = () => {
         }}
         title={editingTicket ? 'Редактирование заявки' : 'Создание заявки'}
         size="xl"
+        confirmClose
+        confirmMessage="Вы уверены, что хотите закрыть окно? Несохранённые данные заявки будут потеряны."
       >
         <TicketForm
           ticket={editingTicket}

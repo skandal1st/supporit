@@ -7,9 +7,21 @@ interface ModalProps {
   title: string;
   children: ReactNode;
   size?: 'sm' | 'md' | 'lg' | 'xl';
+  /** Требовать подтверждение перед закрытием */
+  confirmClose?: boolean;
+  /** Сообщение для диалога подтверждения */
+  confirmMessage?: string;
 }
 
-export const Modal = ({ isOpen, onClose, title, children, size = 'md' }: ModalProps) => {
+export const Modal = ({
+  isOpen,
+  onClose,
+  title,
+  children,
+  size = 'md',
+  confirmClose = false,
+  confirmMessage = 'Вы уверены, что хотите закрыть окно? Несохранённые данные будут потеряны.'
+}: ModalProps) => {
   if (!isOpen) return null;
 
   const sizes = {
@@ -19,13 +31,23 @@ export const Modal = ({ isOpen, onClose, title, children, size = 'md' }: ModalPr
     xl: 'max-w-4xl',
   };
 
+  const handleClose = () => {
+    if (confirmClose) {
+      if (window.confirm(confirmMessage)) {
+        onClose();
+      }
+    } else {
+      onClose();
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
         {/* Backdrop */}
         <div
           className="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75 dark:bg-opacity-50"
-          onClick={onClose}
+          onClick={handleClose}
         />
 
         {/* Modal panel */}
@@ -37,7 +59,7 @@ export const Modal = ({ isOpen, onClose, title, children, size = 'md' }: ModalPr
                 {title}
               </h3>
               <button
-                onClick={onClose}
+                onClick={handleClose}
                 className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 focus:outline-none"
               >
                 <X className="h-6 w-6" />
