@@ -259,5 +259,60 @@ export interface Notification {
   created_at: string;
 }
 
+// Zabbix типы
+export interface ZabbixHost {
+  hostid: string;
+  host: string;
+  name: string;
+  status: string;
+  available?: boolean;
+  lastCheck?: string;
+  interfaces?: Array<{
+    interfaceid: string;
+    ip: string;
+    type: string;
+    main: string;
+    available: string;
+  }>;
+}
+
+export interface ZabbixPageCounters {
+  total: number | null;
+  black: number | null;
+  color: number | null;
+}
+
+export interface ZabbixGroup {
+  groupid: string;
+  name: string;
+}
+
+export interface ZabbixTemplate {
+  templateid: string;
+  name: string;
+  host: string;
+}
+
+export interface ZabbixEquipmentStatus {
+  found: boolean;
+  reason?: 'no_ip' | 'not_in_zabbix';
+  message?: string;
+  hostid?: string;
+  hostname?: string;
+  available?: boolean;
+  lastCheck?: string;
+  ip?: string;
+}
+
+export interface ZabbixEquipmentCounters {
+  supported: boolean;
+  found: boolean;
+  reason?: string;
+  message?: string;
+  hostid?: string;
+  hostname?: string;
+  counters?: ZabbixPageCounters;
+}
+
 
 

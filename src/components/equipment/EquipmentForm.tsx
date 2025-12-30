@@ -6,6 +6,7 @@ import type { Equipment, Building, User } from '../../types';
 import { Button } from '../ui/Button';
 import { buildingsService } from '../../services/buildings.service';
 import { usersService } from '../../services/users.service';
+import { ZabbixStatus } from './ZabbixStatus';
 
 const equipmentSchema = z.object({
   name: z.string().min(1, 'Название обязательно'),
@@ -727,13 +728,24 @@ export const EquipmentForm = ({ equipment, onSubmit, onCancel, loading }: Equipm
       </div>
 
       {/* Дополнительные поля в зависимости от категории */}
-      <EquipmentCategoryFields 
-        category={watch('category')} 
+      <EquipmentCategoryFields
+        category={watch('category')}
         specifications={equipment?.specifications}
         register={register}
         setValue={setValue}
         watch={watch}
       />
+
+      {/* Секция мониторинга Zabbix (только для редактирования) */}
+      {equipment && (
+        <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+          <ZabbixStatus
+            equipmentId={equipment.id}
+            category={equipment.category}
+            ipAddress={equipment.ip_address}
+          />
+        </div>
+      )}
 
       <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200 dark:border-gray-700">
         <Button type="button" variant="secondary" onClick={onCancel} disabled={loading}>

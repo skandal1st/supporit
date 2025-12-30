@@ -6,6 +6,7 @@ import type { Equipment, EquipmentStatus } from '../types';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
 import { EquipmentForm } from '../components/equipment/EquipmentForm';
+import { ZabbixStatus } from '../components/equipment/ZabbixStatus';
 import { Table, TableHeader, TableHeaderCell, TableBody, TableRow, TableCell } from '../components/ui/Table';
 import { formatCurrency, getStatusLabel, getStatusColor, getCategoryLabel } from '../utils/format';
 import { useAuthStore } from '../store/auth.store';
@@ -279,6 +280,7 @@ export const EquipmentPage = () => {
               <TableHeaderCell>Владелец</TableHeaderCell>
               <TableHeaderCell>Местоположение</TableHeaderCell>
               <TableHeaderCell>Стоимость</TableHeaderCell>
+              <TableHeaderCell>Мониторинг</TableHeaderCell>
               {canManage && <TableHeaderCell>Действия</TableHeaderCell>}
             </TableHeader>
             <TableBody>
@@ -320,6 +322,14 @@ export const EquipmentPage = () => {
                     )}
                   </TableCell>
                   <TableCell>{formatCurrency(item.cost)}</TableCell>
+                  <TableCell>
+                    <ZabbixStatus
+                      equipmentId={item.id}
+                      category={item.category}
+                      ipAddress={item.ip_address}
+                      compact
+                    />
+                  </TableCell>
                   <TableCell>
                     {canManage ? (
                       <div className="flex items-center space-x-2">

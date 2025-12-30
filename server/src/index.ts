@@ -7,6 +7,7 @@ import usersRoutes from './routes/users.js';
 import ticketsRoutes from './routes/tickets.js';
 import consumablesRoutes from './routes/consumables.js';
 import buildingsRoutes from './routes/buildings.js';
+import zabbixRoutes from './routes/zabbix.js';
 import { pool } from './config/database.js';
 
 dotenv.config();
@@ -28,6 +29,7 @@ app.use('/api/users', usersRoutes);
 app.use('/api/tickets', ticketsRoutes);
 app.use('/api/consumables', consumablesRoutes);
 app.use('/api/buildings', buildingsRoutes);
+app.use('/api/zabbix', zabbixRoutes);
 
 // Health check
 app.get('/health', async (req, res) => {
