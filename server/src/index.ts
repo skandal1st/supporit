@@ -9,6 +9,8 @@ import ticketsRoutes from './routes/tickets.js';
 import consumablesRoutes from './routes/consumables.js';
 import buildingsRoutes from './routes/buildings.js';
 import zabbixRoutes from './routes/zabbix.js';
+import dictionariesRoutes from './routes/dictionaries.js';
+import settingsRoutes from './routes/settings.js';
 import { pool } from './config/database.js';
 import { startEmailCron } from './services/email-cron.service.js';
 import { verifySmtpConnection } from './services/email-sender.service.js';
@@ -36,6 +38,8 @@ app.use('/api/tickets', ticketsRoutes);
 app.use('/api/consumables', consumablesRoutes);
 app.use('/api/buildings', buildingsRoutes);
 app.use('/api/zabbix', zabbixRoutes);
+app.use('/api/dictionaries', dictionariesRoutes);
+app.use('/api/settings', settingsRoutes);
 
 // Health check
 app.get('/health', async (req, res) => {
