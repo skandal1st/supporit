@@ -16,6 +16,7 @@ export const authenticate = (
     const token = req.headers.authorization?.replace('Bearer ', '');
 
     if (!token) {
+      console.log('[Auth] ❌ Токен не предоставлен для', req.method, req.path);
       return res.status(401).json({ error: 'Токен не предоставлен' });
     }
 
@@ -27,8 +28,11 @@ export const authenticate = (
 
     req.userId = decoded.userId;
     req.userRole = decoded.role;
+    console.log('[Auth] ✅ Токен валиден для пользователя:', decoded.userId, decoded.email);
     next();
   } catch (error) {
+    console.log('[Auth] ❌ Недействительный токен для', req.method, req.path);
+    console.log('[Auth] Ошибка:', error instanceof Error ? error.message : error);
     return res.status(401).json({ error: 'Недействительный токен' });
   }
 };
