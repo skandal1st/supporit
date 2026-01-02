@@ -1,6 +1,7 @@
 import { Router, Response } from 'express';
 import { pool } from '../config/database.js';
 import { authenticate, requireRole, AuthRequest } from '../middleware/auth.js';
+import { sendTicketStatusEmail } from '../services/email-sender.service.js';
 
 const router = Router();
 
@@ -228,9 +229,9 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
     const result = await client.query(
       `INSERT INTO tickets (
         title, description, category, priority, creator_id, equipment_id,
-        location_department, location_room, desired_resolution_date,
+        location_department, location_room, desired_resolution_date, created_via,
         created_at, updated_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW())
       RETURNING *`,
       [
         title,
@@ -242,6 +243,7 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
         location_department || null,
         location_room || null,
         desired_resolution_date || null,
+        'web', // created_via
       ]
     );
 
@@ -535,6 +537,38 @@ router.put('/:id', authenticate, async (req: AuthRequest, res: Response) => {
         [id]
       );
 
+      // Отправка email-уведомлений при изменении статуса
+      if (newStatus !== oldStatus && (newStatus === 'in_progress' || newStatus === 'resolved')) {
+        // Определяем email получателя
+        let recipientEmail: string | null = null;
+
+        if (ticket.creator_id) {
+          // Если есть creator, берем его email из уже загруженных данных
+          recipientEmail = creator.rows[0]?.email;
+        } else if (ticket.email_sender) {
+          // Если нет creator, но есть email_sender (тикет из email без пользователя)
+          recipientEmail = ticket.email_sender;
+        }
+
+        // Отправляем email
+        if (recipientEmail && process.env.SMTP_ENABLED === 'true') {
+          try {
+            const assigneeName = assignee.rows[0]?.full_name;
+
+            await sendTicketStatusEmail(
+              recipientEmail,
+              ticket.id,
+              ticket.title,
+              newStatus,
+              assigneeName
+            );
+          } catch (emailError) {
+            console.error('[Tickets API] Ошибка отправки email:', emailError);
+            // Не прерываем выполнение, просто логируем ошибку
+          }
+        }
+      }
+
       res.json({
         data: {
           ...ticket,
@@ -552,6 +586,72 @@ router.put('/:id', authenticate, async (req: AuthRequest, res: Response) => {
     } finally {
       client.release();
     }
+});
+
+// Привязать email-тикет к пользователю (только для admin и it_specialist)
+router.post('/:id/assign-user', authenticate, requireRole('admin', 'it_specialist'), async (req: AuthRequest, res: Response) => {
+  const { id } = req.params;
+  const { user_id } = req.body;
+
+  if (!user_id) {
+    return res.status(400).json({ error: 'user_id обязателен' });
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    // Проверяем существование тикета
+    const ticketResult = await client.query('SELECT * FROM tickets WHERE id = $1', [id]);
+    if (ticketResult.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Тикет не найден' });
+    }
+
+    const ticket = ticketResult.rows[0];
+
+    // Проверяем, что тикет действительно требует привязки
+    if (ticket.status !== 'pending_user' || !ticket.email_sender) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({
+        error: 'Тикет не требует привязки пользователя'
+      });
+    }
+
+    // Проверяем существование пользователя
+    const userResult = await client.query('SELECT id, email FROM users WHERE id = $1', [user_id]);
+    if (userResult.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Пользователь не найден' });
+    }
+
+    // Привязываем тикет: устанавливаем creator_id и меняем статус на 'new'
+    const updateResult = await client.query(
+      `UPDATE tickets
+       SET creator_id = $1,
+           status = 'new',
+           updated_at = NOW()
+       WHERE id = $2
+       RETURNING *`,
+      [user_id, id]
+    );
+
+    await client.query('COMMIT');
+
+    const updatedTicket = updateResult.rows[0];
+    console.log(`[Tickets API] Тикет ${id.substring(0, 8)} привязан к пользователю ${userResult.rows[0].email}`);
+
+    res.json({
+      message: 'Тикет успешно привязан к пользователю',
+      data: updatedTicket,
+    });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('[Tickets API] Ошибка привязки тикета:', error);
+    res.status(500).json({ error: 'Ошибка при привязке тикета' });
+  } finally {
+    client.release();
+  }
 });
 
 // Удалить заявку

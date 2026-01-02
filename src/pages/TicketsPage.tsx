@@ -16,6 +16,7 @@ const getStatusLabel = (status: TicketStatus): string => {
     waiting: 'Ожидание',
     resolved: 'Решена',
     closed: 'Закрыта',
+    pending_user: 'Требует пользователя',
   };
   return labels[status] || status;
 };
@@ -27,6 +28,7 @@ const getStatusColor = (status: TicketStatus): string => {
     waiting: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
     resolved: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
     closed: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200',
+    pending_user: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
   };
   return colors[status] || '';
 };
@@ -247,6 +249,7 @@ export const TicketsPage = () => {
               <option value="waiting">Ожидание</option>
               <option value="resolved">Решена</option>
               <option value="closed">Закрыта</option>
+              {canManage && <option value="pending_user">Требует пользователя</option>}
             </select>
             <select
               value={filters.priority || 'all'}
@@ -321,12 +324,14 @@ export const TicketsPage = () => {
                         onChange={(e) => handleStatusChange(ticket.id, e.target.value as TicketStatus)}
                         className={`text-xs font-semibold rounded-full px-2 py-1 border-0 focus:ring-2 focus:ring-primary-500 ${getStatusColor(ticket.status)} cursor-pointer`}
                         onClick={(e) => e.stopPropagation()}
+                        disabled={ticket.status === 'pending_user'}
                       >
                         <option value="new">Новая</option>
                         <option value="in_progress">В работе</option>
                         <option value="waiting">Ожидание</option>
                         <option value="resolved">Решена</option>
                         <option value="closed">Закрыта</option>
+                        {ticket.status === 'pending_user' && <option value="pending_user">Требует пользователя</option>}
                       </select>
                     ) : (
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(ticket.status)}`}>
@@ -341,6 +346,18 @@ export const TicketsPage = () => {
                         {ticket.creator.department && (
                           <div className="text-sm text-gray-500 dark:text-gray-400">{ticket.creator.department}</div>
                         )}
+                        {ticket.created_via === 'email' && (
+                          <span className="inline-flex items-center px-2 py-0.5 mt-1 text-xs font-medium rounded-full bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200">
+                            ✉ Email
+                          </span>
+                        )}
+                      </div>
+                    ) : ticket.email_sender ? (
+                      <div>
+                        <div className="text-sm text-gray-600 dark:text-gray-400">{ticket.email_sender}</div>
+                        <span className="inline-flex items-center px-2 py-0.5 mt-1 text-xs font-medium rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">
+                          ⚠ Нет пользователя
+                        </span>
                       </div>
                     ) : (
                       <span className="text-gray-400">-</span>

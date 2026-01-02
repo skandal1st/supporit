@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import path from 'path';
 import authRoutes from './routes/auth.js';
 import equipmentRoutes from './routes/equipment.js';
 import usersRoutes from './routes/users.js';
@@ -9,6 +10,8 @@ import consumablesRoutes from './routes/consumables.js';
 import buildingsRoutes from './routes/buildings.js';
 import zabbixRoutes from './routes/zabbix.js';
 import { pool } from './config/database.js';
+import { startEmailCron } from './services/email-cron.service.js';
+import { verifySmtpConnection } from './services/email-sender.service.js';
 
 dotenv.config();
 
@@ -21,6 +24,9 @@ app.use(cors({
   credentials: true,
 }));
 app.use(express.json());
+
+// Статические файлы для загруженных вложений
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -51,9 +57,25 @@ app.get('/health', async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`🚀 Сервер запущен на порту ${PORT}`);
   console.log(`📡 API доступен по адресу: http://localhost:${PORT}/api`);
   console.log(`💚 Health check: http://localhost:${PORT}/health`);
+
+  // Проверка SMTP соединения
+  if (process.env.SMTP_ENABLED === 'true') {
+    const smtpOk = await verifySmtpConnection();
+    if (smtpOk) {
+      console.log('📧 SMTP соединение установлено');
+    } else {
+      console.warn('⚠️  SMTP соединение не установлено (проверьте настройки в .env)');
+    }
+  }
+
+  // Запуск email-приемника (cron для проверки писем)
+  if (process.env.EMAIL_RECEIVER_ENABLED === 'true') {
+    startEmailCron();
+    console.log('📬 Email-приемник запущен');
+  }
 });
 

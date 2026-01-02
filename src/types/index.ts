@@ -19,10 +19,13 @@ export type EquipmentCategory =
 export type TicketPriority = 'low' | 'medium' | 'high' | 'critical';
 
 // Статусы заявок
-export type TicketStatus = 'new' | 'in_progress' | 'waiting' | 'resolved' | 'closed';
+export type TicketStatus = 'new' | 'in_progress' | 'waiting' | 'resolved' | 'closed' | 'pending_user';
 
 // Категории заявок
 export type TicketCategory = 'hardware' | 'software' | 'network' | 'other';
+
+// Источник создания заявки
+export type TicketSource = 'web' | 'email' | 'api';
 
 // Пользователь
 export interface User {
@@ -99,7 +102,7 @@ export interface Ticket {
   category: TicketCategory;
   priority: TicketPriority;
   status: TicketStatus;
-  creator_id: string;
+  creator_id?: string; // Optional для email-тикетов без зарегистрированного пользователя
   creator?: User;
   assignee_id?: string;
   assignee?: User;
@@ -110,6 +113,8 @@ export interface Ticket {
   consumables?: EquipmentConsumable[];
   selected_consumables?: string[]; // IDs выбранных расходников
   attachments?: string[]; // URLs файлов
+  email_sender?: string; // Email отправителя для тикетов, созданных через email
+  created_via?: TicketSource; // Источник создания: web, email, api
   desired_resolution_date?: string;
   resolved_at?: string;
   closed_at?: string;
