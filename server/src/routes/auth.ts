@@ -10,6 +10,9 @@ const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN
   ? parseInt(process.env.JWT_EXPIRES_IN, 10) || 604800
   : 604800;
 
+console.log('[Auth] JWT_EXPIRES_IN from env:', process.env.JWT_EXPIRES_IN);
+console.log('[Auth] Parsed JWT_EXPIRES_IN:', JWT_EXPIRES_IN, 'seconds (', JWT_EXPIRES_IN / 86400, 'days)');
+
 const router = Router();
 
 const signUpSchema = z.object({
