@@ -31,8 +31,8 @@ async function request<T>(
       if (response.status === 401) {
         removeAuthToken();
         // Перенаправляем на страницу логина только если не находимся на ней
-        if (!window.location.pathname.includes('/signin')) {
-          window.location.href = '/signin';
+        if (!window.location.pathname.includes('/login')) {
+          window.location.href = '/login';
         }
       }
 
