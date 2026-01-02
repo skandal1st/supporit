@@ -27,6 +27,15 @@ async function request<T>(
     });
 
     if (!response.ok) {
+      // Если токен невалиден (401), автоматически очищаем его
+      if (response.status === 401) {
+        removeAuthToken();
+        // Перенаправляем на страницу логина только если не находимся на ней
+        if (!window.location.pathname.includes('/signin')) {
+          window.location.href = '/signin';
+        }
+      }
+
       let errorMessage = `HTTP ${response.status}`;
       try {
         const errorData = await response.json();
