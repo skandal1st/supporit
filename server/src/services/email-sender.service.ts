@@ -25,7 +25,10 @@ let transporter: Transporter | null = null;
 
 function getTransporter(): Transporter {
   if (!transporter) {
-    transporter = nodemailer.createTransporter(smtpConfig);
+    transporter = nodemailer.createTransport(smtpConfig);
+  }
+  if (!transporter) {
+    throw new Error('Failed to create SMTP transporter');
   }
   return transporter;
 }

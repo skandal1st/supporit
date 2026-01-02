@@ -230,7 +230,11 @@ async function saveAttachments(
       const filename = `${uuidv4()}${ext}`;
       const filepath = path.join(UPLOAD_DIR, filename);
 
-      // Сохраняем файл
+      // Сохраняем файл (проверяем наличие content)
+      if (!attachment.content) {
+        console.warn(`[Email Receiver] Вложение ${attachment.filename} не имеет содержимого, пропущено`);
+        continue;
+      }
       await fs.writeFile(filepath, attachment.content);
 
       // Сохраняем относительный путь для базы данных
