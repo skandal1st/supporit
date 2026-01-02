@@ -74,24 +74,5 @@ CREATE TRIGGER update_system_settings_updated_at
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
 
--- Row Level Security
-ALTER TABLE dictionaries ENABLE ROW LEVEL SECURITY;
-ALTER TABLE system_settings ENABLE ROW LEVEL SECURITY;
-
--- Политики для dictionaries: все могут читать, только админы могут управлять
-DROP POLICY IF EXISTS "Everyone can view dictionaries" ON dictionaries;
-CREATE POLICY "Everyone can view dictionaries" ON dictionaries
-  FOR SELECT USING (true);
-
-DROP POLICY IF EXISTS "Admins can manage dictionaries" ON dictionaries;
-CREATE POLICY "Admins can manage dictionaries" ON dictionaries
-  FOR ALL USING (
-    EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin')
-  );
-
--- Политики для system_settings: только админы
-DROP POLICY IF EXISTS "Admins can manage settings" ON system_settings;
-CREATE POLICY "Admins can manage settings" ON system_settings
-  FOR ALL USING (
-    EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin')
-  );
+-- Примечание: RLS политики не используются, так как это не Supabase
+-- Безопасность обеспечивается на уровне API через middleware authenticate и requireRole
