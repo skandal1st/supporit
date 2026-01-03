@@ -328,5 +328,17 @@ export interface ZabbixEquipmentCounters {
   supplies?: ZabbixSupply[];
 }
 
+// Системные настройки
+export type SettingType = 'smtp' | 'email' | 'system' | 'other';
+
+export interface SystemSetting {
+  id: string;
+  setting_key: string;
+  setting_value: string | null;
+  is_encrypted: boolean;
+  setting_type: SettingType;
+  description: string | null;
+}
+
 
 

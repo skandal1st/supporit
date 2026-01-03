@@ -9,7 +9,8 @@ import {
   Menu,
   X,
   Box,
-  Building2
+  Building2,
+  Settings
 } from 'lucide-react';
 import { useAuthStore } from '../../store/auth.store';
 import { useNavigate } from 'react-router-dom';
@@ -47,11 +48,17 @@ const navItems: NavItem[] = [
   },
   { name: 'Отчеты', path: '/reports', icon: FileText, checkPermission: canViewReports },
   { name: 'Пользователи', path: '/users', icon: Users, checkPermission: canManageUsers },
-  { 
-    name: 'Здания', 
-    path: '/buildings', 
+  {
+    name: 'Здания',
+    path: '/buildings',
     icon: Building2,
     checkPermission: (role) => role !== 'employee' // Сотрудники не видят здания
+  },
+  {
+    name: 'Настройки',
+    path: '/settings',
+    icon: Settings,
+    checkPermission: canManageUsers // Только администраторы видят настройки
   },
 ];
 

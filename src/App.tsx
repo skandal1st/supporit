@@ -11,6 +11,7 @@ import { TicketsPage } from './pages/TicketsPage';
 import { ConsumablesPage } from './pages/ConsumablesPage';
 import { BuildingsPage } from './pages/BuildingsPage';
 import { UsersPage } from './pages/UsersPage';
+import { SettingsPage } from './pages/SettingsPage';
 import { UnauthorizedPage } from './pages/UnauthorizedPage';
 
 // Компонент для перенаправления в зависимости от роли
@@ -121,13 +122,23 @@ function App() {
             </ProtectedRoute>
           }
         />
-        <Route 
-          path="/" 
+        <Route
+          path="/settings"
+          element={
+            <ProtectedRoute requiredRoles={['admin']}>
+              <Layout>
+                <SettingsPage />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/"
           element={
             <ProtectedRoute>
               <RedirectRoute />
             </ProtectedRoute>
-          } 
+          }
         />
       </Routes>
     </BrowserRouter>
