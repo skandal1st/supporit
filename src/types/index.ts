@@ -340,5 +340,28 @@ export interface SystemSetting {
   description: string | null;
 }
 
+// Справочники
+export type DictionaryType =
+  | 'ticket_category'
+  | 'ticket_priority'
+  | 'ticket_status'
+  | 'equipment_category'
+  | 'equipment_status'
+  | 'consumable_type';
+
+export interface Dictionary {
+  id: string;
+  dictionary_type: DictionaryType;
+  key: string;
+  label: string;
+  color?: string;
+  icon?: string;
+  sort_order: number;
+  is_active: boolean;
+  is_system: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 
 
