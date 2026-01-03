@@ -1,6 +1,7 @@
-import { Bell, Moon, Sun } from 'lucide-react';
+import { Moon, Sun } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useAuthStore } from '../../store/auth.store';
+import { NotificationBell } from '../notifications/NotificationBell';
 
 export const Header = () => {
   const user = useAuthStore((state) => state.user);
@@ -32,10 +33,7 @@ export const Header = () => {
 
         <div className="flex items-center space-x-4">
           {/* Notifications */}
-          <button className="relative p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
-            <Bell className="h-5 w-5" />
-            <span className="absolute top-1 right-1 h-2 w-2 bg-red-500 rounded-full"></span>
-          </button>
+          <NotificationBell />
 
           {/* Dark mode toggle */}
           <button
