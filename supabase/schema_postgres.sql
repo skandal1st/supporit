@@ -139,6 +139,7 @@ CREATE TABLE IF NOT EXISTS software_licenses (
   software_name TEXT NOT NULL,
   vendor TEXT,
   license_type TEXT,
+  license_key TEXT,
   total_licenses INTEGER NOT NULL DEFAULT 1,
   used_licenses INTEGER NOT NULL DEFAULT 0,
   expires_at DATE,

@@ -10,7 +10,8 @@ import {
   X,
   Box,
   Building2,
-  Settings
+  Settings,
+  Key
 } from 'lucide-react';
 import { useAuthStore } from '../../store/auth.store';
 import { useNavigate } from 'react-router-dom';
@@ -40,11 +41,17 @@ const navItems: NavItem[] = [
     checkPermission: (role) => role !== 'employee' // Сотрудники не видят оборудование
   },
   { name: 'Заявки', path: '/tickets', icon: Ticket },
-  { 
-    name: 'Расходники', 
-    path: '/consumables', 
+  {
+    name: 'Расходники',
+    path: '/consumables',
     icon: Box,
     checkPermission: (role) => role !== 'employee' // Сотрудники не видят расходники
+  },
+  {
+    name: 'Лицензии',
+    path: '/licenses',
+    icon: Key,
+    checkPermission: (role) => role !== 'employee' // Сотрудники не видят лицензии
   },
   { name: 'Отчеты', path: '/reports', icon: FileText, checkPermission: canViewReports },
   { name: 'Пользователи', path: '/users', icon: Users, checkPermission: canManageUsers },

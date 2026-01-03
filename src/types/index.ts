@@ -191,35 +191,6 @@ export interface ConsumableIssue {
   created_at: string;
 }
 
-// Лицензия ПО
-export interface SoftwareLicense {
-  id: string;
-  software_name: string;
-  vendor: string;
-  license_type: string; // корпоративная, индивидуальная и т.д.
-  total_licenses: number;
-  used_licenses: number;
-  expires_at?: string;
-  cost?: number;
-  purchase_date?: string;
-  notes?: string;
-  created_at: string;
-  updated_at: string;
-}
-
-// Привязка лицензии
-export interface LicenseAssignment {
-  id: string;
-  license_id: string;
-  license?: SoftwareLicense;
-  equipment_id?: string;
-  equipment?: Equipment;
-  user_id?: string;
-  user?: User;
-  assigned_at: string;
-  released_at?: string;
-}
-
 // Плановые работы
 export interface Maintenance {
   id: string;
@@ -264,6 +235,39 @@ export interface Notification {
   related_id?: string;
   is_read: boolean;
   created_at: string;
+}
+
+// Лицензия ПО
+export interface SoftwareLicense {
+  id: string;
+  software_name: string;
+  vendor?: string;
+  license_type?: string;
+  license_key?: string;
+  total_licenses: number;
+  used_licenses: number;
+  available_licenses?: number;
+  expires_at?: string;
+  cost?: number;
+  purchase_date?: string;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+  assignments?: LicenseAssignment[];
+}
+
+// Привязка лицензии
+export interface LicenseAssignment {
+  id: string;
+  license_id: string;
+  equipment_id?: string;
+  equipment_name?: string;
+  equipment_inventory_number?: string;
+  user_id?: string;
+  user_name?: string;
+  user_email?: string;
+  assigned_at: string;
+  released_at?: string;
 }
 
 // Zabbix типы
