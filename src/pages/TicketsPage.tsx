@@ -5,6 +5,7 @@ import type { Ticket, TicketStatus, TicketPriority, TicketCategory } from '../ty
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
 import { TicketForm } from '../components/tickets/TicketForm';
+import { TicketDetailsModal } from '../components/tickets/TicketDetailsModal';
 import { Table, TableHeader, TableHeaderCell, TableBody, TableRow, TableCell } from '../components/ui/Table';
 import { useAuthStore } from '../store/auth.store';
 import { canManageTickets } from '../utils/permissions';
@@ -72,6 +73,7 @@ export const TicketsPage = () => {
   const [pageSize] = useState(20);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTicket, setEditingTicket] = useState<Ticket | undefined>();
+  const [viewingTicketId, setViewingTicketId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filters, setFilters] = useState<TicketFilters>({});
   const [error, setError] = useState<string | null>(null);
@@ -120,13 +122,8 @@ export const TicketsPage = () => {
     setIsModalOpen(true);
   };
 
-  const handleView = async (ticket: Ticket) => {
-    // TODO: Открыть детальный просмотр заявки
-    const { data } = await ticketsService.getTicketById(ticket.id);
-    if (data) {
-      setEditingTicket(data);
-      setIsModalOpen(true);
-    }
+  const handleView = (ticket: Ticket) => {
+    setViewingTicketId(ticket.id);
   };
 
   const handleSubmit = async (data: any) => {
@@ -509,6 +506,15 @@ export const TicketsPage = () => {
           }}
         />
       </Modal>
+
+      {/* Модальное окно просмотра заявки */}
+      {viewingTicketId && (
+        <TicketDetailsModal
+          ticketId={viewingTicketId}
+          isOpen={!!viewingTicketId}
+          onClose={() => setViewingTicketId(null)}
+        />
+      )}
     </div>
   );
 };

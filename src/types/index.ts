@@ -130,6 +130,8 @@ export interface TicketComment {
   ticket_id: string;
   user_id: string;
   user?: User;
+  user_name?: string;
+  user_role?: UserRole;
   content: string;
   attachments?: string[];
   created_at: string;
