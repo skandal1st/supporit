@@ -218,19 +218,25 @@ export const SettingsPage = () => {
         </div>
       ) : (
         <div className="space-y-6">
-          {(Object.keys(groupedSettings) as SettingType[]).map((type) => (
-            <div
-              key={type}
-              className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden"
-            >
-              <div className="border-b border-gray-200 dark:border-gray-700 px-6 py-4">
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                  {settingTypeMetadata[type].title}
-                </h2>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                  {settingTypeMetadata[type].description}
-                </p>
-              </div>
+          {(Object.keys(groupedSettings) as SettingType[]).map((type) => {
+            const metadata = settingTypeMetadata[type] || {
+              title: type.toUpperCase(),
+              description: `Настройки типа ${type}`,
+            };
+
+            return (
+              <div
+                key={type}
+                className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden"
+              >
+                <div className="border-b border-gray-200 dark:border-gray-700 px-6 py-4">
+                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                    {metadata.title}
+                  </h2>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                    {metadata.description}
+                  </p>
+                </div>
 
               <div className="p-6 space-y-4">
                 {groupedSettings[type].map((setting) => (
@@ -285,7 +291,8 @@ export const SettingsPage = () => {
                 ))}
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
