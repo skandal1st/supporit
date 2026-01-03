@@ -2,6 +2,7 @@ import { Router, Response } from 'express';
 import { pool } from '../config/database.js';
 import { authenticate, requireRole, AuthRequest } from '../middleware/auth.js';
 import { sendTicketStatusEmail } from '../services/email-sender.service.js';
+import { notifyNewTicket, notifyTicketAssigned, notifyTicketStatusChanged } from '../services/notification.service.js';
 
 const router = Router();
 
@@ -262,6 +263,9 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
     }
 
     await client.query('COMMIT');
+
+    // Отправляем уведомление ИТ-специалистам и администраторам о новой заявке
+    await notifyNewTicket(ticket.id, ticket.title);
 
     // Загружаем связанные данные
     const [creator, equipment, consumables] = await Promise.all([
@@ -536,6 +540,20 @@ router.put('/:id', authenticate, async (req: AuthRequest, res: Response) => {
         'SELECT consumable_id FROM ticket_consumables WHERE ticket_id = $1',
         [id]
       );
+
+      // Отправка уведомлений об изменениях заявки
+      const oldAssignee = existingTicket.assignee_id;
+      const newAssignee = ticket.assignee_id;
+
+      // Уведомление о назначении заявки
+      if (newAssignee && newAssignee !== oldAssignee) {
+        await notifyTicketAssigned(newAssignee, ticket.id, ticket.title);
+      }
+
+      // Уведомление об изменении статуса (отправляем создателю заявки)
+      if (newStatus !== oldStatus && ticket.creator_id) {
+        await notifyTicketStatusChanged(ticket.creator_id, ticket.id, ticket.title, newStatus);
+      }
 
       // Отправка email-уведомлений при изменении статуса
       if (newStatus !== oldStatus && (newStatus === 'in_progress' || newStatus === 'resolved')) {
