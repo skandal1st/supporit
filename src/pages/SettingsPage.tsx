@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { Settings as SettingsIcon, Server, Building2, Package, List } from 'lucide-react';
+import { Settings as SettingsIcon, Server, Building2, Package, List, MessageCircle } from 'lucide-react';
 import { Tabs } from '../components/ui/Tabs';
 import { SystemSettings } from '../components/settings/SystemSettings';
 import { BuildingsSettings } from '../components/settings/BuildingsSettings';
 import { DictionariesSettings } from '../components/settings/DictionariesSettings';
+import { TelegramSettings } from '../components/settings/TelegramSettings';
 
 export const SettingsPage = () => {
   const [activeTab, setActiveTab] = useState('system');
@@ -13,6 +14,11 @@ export const SettingsPage = () => {
       id: 'system',
       label: 'Системные настройки',
       icon: <Server className="h-4 w-4" />,
+    },
+    {
+      id: 'telegram',
+      label: 'Telegram',
+      icon: <MessageCircle className="h-4 w-4" />,
     },
     {
       id: 'buildings',
@@ -35,6 +41,8 @@ export const SettingsPage = () => {
     switch (activeTab) {
       case 'system':
         return <SystemSettings />;
+      case 'telegram':
+        return <TelegramSettings />;
       case 'buildings':
         return <BuildingsSettings />;
       case 'equipment_categories':

@@ -1,6 +1,7 @@
 import { Router, Response } from 'express';
 import { pool } from '../config/database.js';
 import { authenticate, requireRole, AuthRequest } from '../middleware/auth.js';
+import QRCode from 'qrcode';
 
 const router = Router();
 
@@ -727,7 +728,7 @@ router.post('/:id/consumables', authenticate, requireRole('admin', 'it_specialis
     const result = await pool.query(
       `INSERT INTO equipment_consumables (equipment_id, consumable_id, quantity_per_unit)
        VALUES ($1, $2, $3)
-       ON CONFLICT (equipment_id, consumable_id) 
+       ON CONFLICT (equipment_id, consumable_id)
        DO UPDATE SET quantity_per_unit = $3
        RETURNING *`,
       [id, consumable_id, quantity_per_unit]
@@ -736,8 +737,138 @@ router.post('/:id/consumables', authenticate, requireRole('admin', 'it_specialis
     res.json({ data: result.rows[0] });
   } catch (error: any) {
     console.error('Ошибка связывания расходника с оборудованием:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Ошибка при связывании расходника с оборудованием',
+      message: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
+// Генерация QR-кода для оборудования
+router.get('/:id/qr-code', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { format = 'png', size = '200' } = req.query;
+
+    // Проверяем существование оборудования
+    const result = await pool.query(
+      'SELECT id, name, inventory_number FROM equipment WHERE id = $1',
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Оборудование не найдено' });
+    }
+
+    const equipment = result.rows[0];
+
+    // Формируем данные для QR-кода
+    const qrData = JSON.stringify({
+      type: 'equipment',
+      id: equipment.id,
+      v: 1, // версия формата
+    });
+
+    const qrSize = Math.min(Math.max(parseInt(size as string) || 200, 100), 500);
+
+    if (format === 'svg') {
+      // Возвращаем SVG
+      const svg = await QRCode.toString(qrData, {
+        type: 'svg',
+        width: qrSize,
+        margin: 2,
+        errorCorrectionLevel: 'M',
+      });
+
+      res.setHeader('Content-Type', 'image/svg+xml');
+      res.send(svg);
+    } else if (format === 'dataurl') {
+      // Возвращаем Data URL (для отображения в img src)
+      const dataUrl = await QRCode.toDataURL(qrData, {
+        width: qrSize,
+        margin: 2,
+        errorCorrectionLevel: 'M',
+      });
+
+      res.json({
+        data: {
+          dataUrl,
+          equipment: {
+            id: equipment.id,
+            name: equipment.name,
+            inventory_number: equipment.inventory_number,
+          }
+        }
+      });
+    } else {
+      // Возвращаем PNG (по умолчанию)
+      const buffer = await QRCode.toBuffer(qrData, {
+        type: 'png',
+        width: qrSize,
+        margin: 2,
+        errorCorrectionLevel: 'M',
+      });
+
+      res.setHeader('Content-Type', 'image/png');
+      res.setHeader('Content-Disposition', `inline; filename="qr-${equipment.inventory_number}.png"`);
+      res.send(buffer);
+    }
+  } catch (error: any) {
+    console.error('Ошибка генерации QR-кода:', error);
+    res.status(500).json({
+      error: 'Ошибка при генерации QR-кода',
+      message: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
+// Массовая генерация QR-кодов для печати
+router.post('/qr-codes/batch', authenticate, requireRole('admin', 'it_specialist'), async (req: AuthRequest, res: Response) => {
+  try {
+    const { equipment_ids } = req.body;
+
+    if (!equipment_ids || !Array.isArray(equipment_ids) || equipment_ids.length === 0) {
+      return res.status(400).json({ error: 'Необходимо указать массив ID оборудования' });
+    }
+
+    if (equipment_ids.length > 50) {
+      return res.status(400).json({ error: 'Максимум 50 QR-кодов за раз' });
+    }
+
+    // Получаем оборудование
+    const result = await pool.query(
+      'SELECT id, name, inventory_number FROM equipment WHERE id = ANY($1)',
+      [equipment_ids]
+    );
+
+    const qrCodes = await Promise.all(
+      result.rows.map(async (equipment) => {
+        const qrData = JSON.stringify({
+          type: 'equipment',
+          id: equipment.id,
+          v: 1,
+        });
+
+        const dataUrl = await QRCode.toDataURL(qrData, {
+          width: 200,
+          margin: 2,
+          errorCorrectionLevel: 'M',
+        });
+
+        return {
+          id: equipment.id,
+          name: equipment.name,
+          inventory_number: equipment.inventory_number,
+          qr_data_url: dataUrl,
+        };
+      })
+    );
+
+    res.json({ data: qrCodes });
+  } catch (error: any) {
+    console.error('Ошибка массовой генерации QR-кодов:', error);
+    res.status(500).json({
+      error: 'Ошибка при генерации QR-кодов',
       message: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }

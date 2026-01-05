@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Search, Edit, Trash2 } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, QrCode, Download, Printer } from 'lucide-react';
 import { equipmentService, type EquipmentFilters } from '../services/equipment.service';
 import { consumablesService } from '../services/consumables.service';
 import type { Equipment, EquipmentStatus } from '../types';
@@ -23,6 +23,10 @@ export const EquipmentPage = () => {
   const [editingEquipment, setEditingEquipment] = useState<Equipment | undefined>();
   const [searchTerm, setSearchTerm] = useState('');
   const [filters, setFilters] = useState<EquipmentFilters>({});
+  const [qrModalOpen, setQrModalOpen] = useState(false);
+  const [qrEquipment, setQrEquipment] = useState<Equipment | null>(null);
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
+  const [qrLoading, setQrLoading] = useState(false);
 
   const [error, setError] = useState<string | null>(null);
   const canManage = canManageEquipment(user?.role);
@@ -197,6 +201,105 @@ export const EquipmentPage = () => {
     setPage(1);
   };
 
+  const handleShowQR = async (item: Equipment) => {
+    setQrEquipment(item);
+    setQrModalOpen(true);
+    setQrLoading(true);
+    setQrDataUrl(null);
+
+    try {
+      const { data, error: qrError } = await equipmentService.getQRCode(item.id);
+      if (qrError) {
+        console.error('Ошибка получения QR-кода:', qrError);
+      } else if (data?.dataUrl) {
+        setQrDataUrl(data.dataUrl);
+      }
+    } catch (err) {
+      console.error('Ошибка получения QR-кода:', err);
+    } finally {
+      setQrLoading(false);
+    }
+  };
+
+  const handleDownloadQR = () => {
+    if (!qrDataUrl || !qrEquipment) return;
+
+    const link = document.createElement('a');
+    link.href = qrDataUrl;
+    link.download = `qr-${qrEquipment.inventory_number}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handlePrintQR = () => {
+    if (!qrDataUrl || !qrEquipment) return;
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>QR-код: ${qrEquipment.inventory_number}</title>
+          <style>
+            body {
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              justify-content: center;
+              min-height: 100vh;
+              margin: 0;
+              font-family: Arial, sans-serif;
+            }
+            .qr-container {
+              text-align: center;
+              padding: 20px;
+              border: 1px solid #ccc;
+            }
+            img {
+              width: 200px;
+              height: 200px;
+            }
+            .equipment-name {
+              font-size: 14px;
+              font-weight: bold;
+              margin-top: 10px;
+            }
+            .equipment-inv {
+              font-size: 12px;
+              color: #666;
+              margin-top: 5px;
+            }
+            @media print {
+              body {
+                print-color-adjust: exact;
+                -webkit-print-color-adjust: exact;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="qr-container">
+            <img src="${qrDataUrl}" alt="QR Code" />
+            <div class="equipment-name">${qrEquipment.name}</div>
+            <div class="equipment-inv">${qrEquipment.inventory_number}</div>
+          </div>
+          <script>
+            window.onload = function() {
+              window.print();
+              window.onafterprint = function() {
+                window.close();
+              };
+            };
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -334,6 +437,13 @@ export const EquipmentPage = () => {
                     {canManage ? (
                       <div className="flex items-center space-x-2">
                         <button
+                          onClick={() => handleShowQR(item)}
+                          className="p-1 text-gray-600 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+                          title="QR-код"
+                        >
+                          <QrCode className="h-4 w-4" />
+                        </button>
+                        <button
                           onClick={() => handleEdit(item)}
                           className="p-1 text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300"
                           title="Редактировать"
@@ -406,6 +516,56 @@ export const EquipmentPage = () => {
             setEditingEquipment(undefined);
           }}
         />
+      </Modal>
+
+      {/* QR Code Modal */}
+      <Modal
+        isOpen={qrModalOpen}
+        onClose={() => {
+          setQrModalOpen(false);
+          setQrEquipment(null);
+          setQrDataUrl(null);
+        }}
+        title="QR-код оборудования"
+        size="sm"
+      >
+        <div className="flex flex-col items-center space-y-4">
+          {qrLoading ? (
+            <div className="flex justify-center items-center py-8">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+            </div>
+          ) : qrDataUrl ? (
+            <>
+              <div className="bg-white p-4 rounded-lg">
+                <img src={qrDataUrl} alt="QR Code" className="w-48 h-48" />
+              </div>
+              {qrEquipment && (
+                <div className="text-center">
+                  <div className="font-medium text-gray-900 dark:text-white">
+                    {qrEquipment.name}
+                  </div>
+                  <div className="text-sm text-gray-500 dark:text-gray-400">
+                    {qrEquipment.inventory_number}
+                  </div>
+                </div>
+              )}
+              <div className="flex space-x-3">
+                <Button variant="secondary" onClick={handleDownloadQR}>
+                  <Download className="h-4 w-4 mr-2" />
+                  Скачать
+                </Button>
+                <Button onClick={handlePrintQR}>
+                  <Printer className="h-4 w-4 mr-2" />
+                  Печать
+                </Button>
+              </div>
+            </>
+          ) : (
+            <div className="text-center py-8 text-red-500 dark:text-red-400">
+              Ошибка загрузки QR-кода
+            </div>
+          )}
+        </div>
       </Modal>
     </div>
   );

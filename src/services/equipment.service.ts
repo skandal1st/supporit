@@ -220,5 +220,22 @@ export const equipmentService = {
       return { data: null, error: error as Error };
     }
   },
+
+  // Получить QR-код оборудования
+  async getQRCode(equipmentId: string): Promise<{ data: { dataUrl: string } | null; error: Error | null }> {
+    try {
+      const { data, error } = await get<{ data: { dataUrl: string } }>(
+        `/equipment/${equipmentId}/qr-code?format=dataurl`
+      );
+
+      if (error || !data) {
+        return { data: null, error: error || new Error('Ошибка генерации QR-кода') };
+      }
+
+      return { data: data.data, error: null };
+    } catch (error) {
+      return { data: null, error: error as Error };
+    }
+  },
 };
 

@@ -1,4 +1,11 @@
 import { pool } from '../config/database.js';
+import {
+  notifyNewTicketTelegram,
+  notifyTicketAssignedTelegram,
+  notifyTicketStatusChangedTelegram,
+  notifyTicketCommentTelegram,
+  notifyLowStockTelegram,
+} from '../telegram/services/telegram-notification.service.js';
 
 type NotificationType = 'info' | 'warning' | 'error' | 'success';
 
@@ -93,6 +100,9 @@ export async function notifyNewTicket(ticketId: string, ticketTitle: string): Pr
         relatedId: ticketId,
       });
     }
+
+    // Отправляем уведомление в Telegram
+    await notifyNewTicketTelegram(ticketId, ticketTitle);
   } catch (error) {
     console.error('[Notification] Ошибка уведомления о новой заявке:', error);
   }
@@ -114,6 +124,9 @@ export async function notifyTicketAssigned(
     relatedType: 'ticket',
     relatedId: ticketId,
   });
+
+  // Отправляем уведомление в Telegram
+  await notifyTicketAssignedTelegram(assigneeId, ticketId, ticketTitle);
 }
 
 /**
@@ -142,6 +155,9 @@ export async function notifyTicketStatusChanged(
     relatedType: 'ticket',
     relatedId: ticketId,
   });
+
+  // Отправляем уведомление в Telegram
+  await notifyTicketStatusChangedTelegram(userId, ticketId, ticketTitle, newStatus);
 }
 
 /**
@@ -161,6 +177,9 @@ export async function notifyTicketComment(
     relatedType: 'ticket',
     relatedId: ticketId,
   });
+
+  // Отправляем уведомление в Telegram
+  await notifyTicketCommentTelegram(userId, ticketId, ticketTitle, commenterName);
 }
 
 /**
@@ -183,6 +202,9 @@ export async function notifyLowStock(consumableName: string, currentStock: numbe
         relatedType: 'consumable',
       });
     }
+
+    // Отправляем уведомление в Telegram
+    await notifyLowStockTelegram(consumableName, currentStock);
   } catch (error) {
     console.error('[Notification] Ошибка уведомления о низком остатке:', error);
   }

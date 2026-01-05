@@ -14,9 +14,11 @@ import dictionariesRoutes from './routes/dictionaries.js';
 import settingsRoutes from './routes/settings.js';
 import notificationsRoutes from './routes/notifications.js';
 import licensesRoutes from './routes/licenses.js';
+import telegramRoutes from './routes/telegram.js';
 import { pool } from './config/database.js';
 import { startEmailCron } from './services/email-cron.service.js';
 import { verifySmtpConnection } from './services/email-sender.service.js';
+import { initTelegramBot, stopTelegramBot } from './telegram/bot.js';
 
 dotenv.config();
 
@@ -46,6 +48,7 @@ app.use('/api/dictionaries', dictionariesRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/notifications', notificationsRoutes);
 app.use('/api/licenses', licensesRoutes);
+app.use('/api/telegram', telegramRoutes);
 
 // Health check
 app.get('/health', async (req, res) => {
@@ -87,5 +90,26 @@ app.listen(PORT, async () => {
     startEmailCron();
     console.log('📬 Email-приемник запущен');
   }
+
+  // Запуск Telegram бота
+  if (process.env.TELEGRAM_BOT_ENABLED === 'true') {
+    const bot = await initTelegramBot();
+    if (bot) {
+      console.log('🤖 Telegram бот запущен');
+    }
+  }
+});
+
+// Graceful shutdown
+process.on('SIGTERM', async () => {
+  console.log('⏹️  Получен сигнал SIGTERM, завершаем работу...');
+  await stopTelegramBot();
+  process.exit(0);
+});
+
+process.on('SIGINT', async () => {
+  console.log('⏹️  Получен сигнал SIGINT, завершаем работу...');
+  await stopTelegramBot();
+  process.exit(0);
 });
 
