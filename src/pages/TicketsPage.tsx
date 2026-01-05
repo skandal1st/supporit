@@ -114,7 +114,6 @@ export const TicketsPage = () => {
   }, [page, filters.status, filters.priority, filters.category, searchTerm]);
 
   const handleCreate = () => {
-    setEditingTicket(undefined);
     setIsModalOpen(true);
   };
 
