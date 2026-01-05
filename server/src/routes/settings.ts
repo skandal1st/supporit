@@ -149,6 +149,16 @@ router.post('/test-email', authenticate, requireRole('admin'), async (req: AuthR
       return res.status(400).json({ error: 'SMTP настройки не заполнены полностью' });
     }
 
+    // Логируем настройки (без пароля)
+    console.log('[Settings API] SMTP настройки:', {
+      host: settings.smtp_host,
+      port: settings.smtp_port || '587',
+      secure: settings.smtp_secure === 'true',
+      user: settings.smtp_user,
+      from_email: settings.from_email,
+      from_name: settings.from_name,
+    });
+
     // Создаем transporter
     const transporter = nodemailer.createTransport({
       host: settings.smtp_host,
@@ -158,7 +168,21 @@ router.post('/test-email', authenticate, requireRole('admin'), async (req: AuthR
         user: settings.smtp_user,
         pass: settings.smtp_password,
       },
+      connectionTimeout: 10000,
+      greetingTimeout: 10000,
     });
+
+    // Проверяем SMTP соединение
+    try {
+      await transporter.verify();
+      console.log('[Settings API] SMTP соединение успешно проверено');
+    } catch (verifyError) {
+      console.error('[Settings API] Ошибка проверки SMTP соединения:', verifyError);
+      return res.status(500).json({
+        error: 'Не удалось подключиться к SMTP серверу',
+        details: verifyError instanceof Error ? verifyError.message : 'Неизвестная ошибка',
+      });
+    }
 
     // Отправляем тестовое письмо
     await transporter.sendMail({

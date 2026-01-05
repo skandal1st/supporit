@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 
 // Ключ шифрования из переменных окружения (должен быть 32 байта)
-const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || 'change-me-32-bytes-key-here!!!';
+const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || 'change-me-32-bytes-key-here!!!!!';
 const IV_LENGTH = 16; // Для AES, длина IV всегда 16 байт
 
 /**
@@ -73,7 +73,7 @@ export function decrypt(text: string): string {
  * @returns true если ключ установлен, false если используется default
  */
 export function isEncryptionKeySet(): boolean {
-  return ENCRYPTION_KEY !== 'change-me-32-bytes-key-here!!!';
+  return ENCRYPTION_KEY !== 'change-me-32-bytes-key-here!!!!!';
 }
 
 /**
