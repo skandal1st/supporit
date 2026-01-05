@@ -8,6 +8,7 @@ import { RegisterPage } from './pages/RegisterPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { EquipmentPage } from './pages/EquipmentPage';
 import { TicketsPage } from './pages/TicketsPage';
+import { TicketWorkPage } from './pages/TicketWorkPage';
 import { ConsumablesPage } from './pages/ConsumablesPage';
 import { BuildingsPage } from './pages/BuildingsPage';
 import { UsersPage } from './pages/UsersPage';
@@ -72,6 +73,16 @@ function App() {
             <ProtectedRoute>
               <Layout>
                 <TicketsPage />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/tickets/:id"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <TicketWorkPage />
               </Layout>
             </ProtectedRoute>
           }

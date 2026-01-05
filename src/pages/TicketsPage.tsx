@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Plus, Search, Edit, Eye, CheckCircle, Clock, XCircle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Plus, Search, CheckCircle, Clock, XCircle, Eye } from 'lucide-react';
 import { ticketsService, type TicketFilters } from '../services/tickets.service';
 import type { Ticket, TicketStatus, TicketPriority, TicketCategory } from '../types';
 import { Button } from '../components/ui/Button';
@@ -65,6 +66,7 @@ const getCategoryLabel = (category: TicketCategory): string => {
 };
 
 export const TicketsPage = () => {
+  const navigate = useNavigate();
   const { user } = useAuthStore();
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
@@ -72,7 +74,6 @@ export const TicketsPage = () => {
   const [page, setPage] = useState(1);
   const [pageSize] = useState(20);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingTicket, setEditingTicket] = useState<Ticket | undefined>();
   const [viewingTicketId, setViewingTicketId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filters, setFilters] = useState<TicketFilters>({});
@@ -117,31 +118,17 @@ export const TicketsPage = () => {
     setIsModalOpen(true);
   };
 
-  const handleEdit = (ticket: Ticket) => {
-    setEditingTicket(ticket);
-    setIsModalOpen(true);
-  };
-
   const handleView = (ticket: Ticket) => {
     setViewingTicketId(ticket.id);
   };
 
   const handleSubmit = async (data: any) => {
-    if (editingTicket) {
-      const { error } = await ticketsService.updateTicket(editingTicket.id, data);
-      if (error) {
-        alert('Ошибка при обновлении: ' + error.message);
-        return;
-      }
-    } else {
-      const { error } = await ticketsService.createTicket(data);
-      if (error) {
-        alert('Ошибка при создании: ' + error.message);
-        return;
-      }
+    const { error } = await ticketsService.createTicket(data);
+    if (error) {
+      alert('Ошибка при создании: ' + error.message);
+      return;
     }
     setIsModalOpen(false);
-    setEditingTicket(undefined);
     loadTickets();
   };
 
@@ -301,8 +288,13 @@ export const TicketsPage = () => {
               {tickets.map((ticket) => (
                 <TableRow key={ticket.id}>
                   <TableCell className="max-w-xs whitespace-normal">
-                    <div>
-                      <div className="font-medium truncate">{ticket.title}</div>
+                    <div
+                      className="cursor-pointer group"
+                      onClick={() => navigate(`/tickets/${ticket.id}`)}
+                    >
+                      <div className="font-medium truncate text-primary-600 dark:text-primary-400 group-hover:text-primary-700 dark:group-hover:text-primary-300 group-hover:underline">
+                        {ticket.title}
+                      </div>
                       <div className="text-sm text-gray-500 dark:text-gray-400 line-clamp-2">
                         {ticket.description}
                       </div>
@@ -387,16 +379,20 @@ export const TicketsPage = () => {
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center space-x-2">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleView(ticket);
-                        }}
-                        className="p-1 text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300"
-                        title="Просмотр"
-                      >
-                        <Eye className="h-4 w-4" />
-                      </button>
+                      {/* Кнопка просмотра только для обычных сотрудников */}
+                      {!canManage && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleView(ticket);
+                          }}
+                          className="p-1 text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300"
+                          title="Просмотр"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </button>
+                      )}
+                      {/* Быстрые действия для ИТ-специалистов */}
                       {canManage && (
                         <>
                           {ticket.status !== 'closed' && ticket.status !== 'resolved' && (
@@ -437,16 +433,6 @@ export const TicketsPage = () => {
                               <XCircle className="h-4 w-4" />
                             </button>
                           )}
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleEdit(ticket);
-                            }}
-                            className="p-1 text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
-                            title="Редактировать"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </button>
                         </>
                       )}
                     </div>
@@ -485,25 +471,18 @@ export const TicketsPage = () => {
         )}
       </div>
 
-      {/* Modal */}
+      {/* Модальное окно создания заявки */}
       <Modal
         isOpen={isModalOpen}
-        onClose={() => {
-          setIsModalOpen(false);
-          setEditingTicket(undefined);
-        }}
-        title={editingTicket ? 'Редактирование заявки' : 'Создание заявки'}
+        onClose={() => setIsModalOpen(false)}
+        title="Создание заявки"
         size="xl"
         confirmClose
         confirmMessage="Вы уверены, что хотите закрыть окно? Несохранённые данные заявки будут потеряны."
       >
         <TicketForm
-          ticket={editingTicket}
           onSubmit={handleSubmit}
-          onCancel={() => {
-            setIsModalOpen(false);
-            setEditingTicket(undefined);
-          }}
+          onCancel={() => setIsModalOpen(false)}
         />
       </Modal>
 
