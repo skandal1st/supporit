@@ -5,20 +5,38 @@
 
 import nodemailer, { Transporter } from 'nodemailer';
 
-// Конфигурация SMTP
+// Конфигурация SMTP (все значения должны быть в .env)
 const smtpConfig = {
-  host: process.env.SMTP_HOST || 'mail.teplocentral.org',
+  host: process.env.SMTP_HOST || '',
   port: parseInt(process.env.SMTP_PORT || '587'),
-  secure: process.env.SMTP_SECURE === 'true' || false, // true для 465, false для других портов
+  secure: process.env.SMTP_SECURE === 'true', // true для 465, false для других портов
   auth: {
-    user: process.env.SMTP_USER || 'support@teplocentral.org',
+    user: process.env.SMTP_USER || '',
     pass: process.env.SMTP_PASSWORD || '',
   },
 };
 
-// Email отправителя
-const FROM_EMAIL = process.env.FROM_EMAIL || 'support@teplocentral.org';
-const FROM_NAME = process.env.FROM_NAME || 'SupporIT Support';
+// Email отправителя (обязательные переменные окружения)
+const FROM_EMAIL = process.env.FROM_EMAIL || '';
+const FROM_NAME = process.env.FROM_NAME || 'SupporIT';
+
+/**
+ * Проверка наличия обязательной конфигурации SMTP
+ */
+function validateSmtpConfig(): void {
+  const missing: string[] = [];
+  if (!smtpConfig.host) missing.push('SMTP_HOST');
+  if (!smtpConfig.auth.user) missing.push('SMTP_USER');
+  if (!smtpConfig.auth.pass) missing.push('SMTP_PASSWORD');
+  if (!FROM_EMAIL) missing.push('FROM_EMAIL');
+
+  if (missing.length > 0) {
+    console.warn(`[Email Sender] ⚠️ SMTP не настроен. Отсутствуют: ${missing.join(', ')}`);
+  }
+}
+
+// Проверяем конфигурацию при загрузке модуля
+validateSmtpConfig();
 
 // Создаем транспортер
 let transporter: Transporter | null = null;

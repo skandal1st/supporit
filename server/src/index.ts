@@ -15,6 +15,7 @@ import settingsRoutes from './routes/settings.js';
 import notificationsRoutes from './routes/notifications.js';
 import licensesRoutes from './routes/licenses.js';
 import telegramRoutes from './routes/telegram.js';
+import updatesRoutes from './routes/updates.js';
 import { pool } from './config/database.js';
 import { startEmailCron } from './services/email-cron.service.js';
 import { verifySmtpConnection } from './services/email-sender.service.js';
@@ -49,6 +50,7 @@ app.use('/api/settings', settingsRoutes);
 app.use('/api/notifications', notificationsRoutes);
 app.use('/api/licenses', licensesRoutes);
 app.use('/api/telegram', telegramRoutes);
+app.use('/api/updates', updatesRoutes);
 
 // Health check
 app.get('/health', async (req, res) => {

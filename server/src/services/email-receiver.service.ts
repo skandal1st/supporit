@@ -28,14 +28,30 @@ interface ParsedTicketData {
   attachments: string[];  // Пути к сохраненным файлам
 }
 
-// Конфигурация IMAP
+// Конфигурация IMAP (все значения должны быть в .env)
 const emailConfig: EmailConfig = {
-  host: process.env.IMAP_HOST || 'mail.teplocentral.org',
+  host: process.env.IMAP_HOST || '',
   port: parseInt(process.env.IMAP_PORT || '993'),
-  user: process.env.IMAP_USER || 'support@teplocentral.org',
+  user: process.env.IMAP_USER || '',
   password: process.env.IMAP_PASSWORD || '',
-  tls: process.env.IMAP_TLS === 'true' || true,
+  tls: process.env.IMAP_TLS !== 'false', // по умолчанию true
 };
+
+/**
+ * Проверка наличия обязательной конфигурации IMAP
+ */
+function validateImapConfig(): boolean {
+  const missing: string[] = [];
+  if (!emailConfig.host) missing.push('IMAP_HOST');
+  if (!emailConfig.user) missing.push('IMAP_USER');
+  if (!emailConfig.password) missing.push('IMAP_PASSWORD');
+
+  if (missing.length > 0) {
+    console.warn(`[Email Receiver] ⚠️ IMAP не настроен. Отсутствуют: ${missing.join(', ')}`);
+    return false;
+  }
+  return true;
+}
 
 // Директория для вложений
 const UPLOAD_DIR = process.env.UPLOAD_DIR || path.join(process.cwd(), 'uploads', 'tickets');
@@ -46,8 +62,8 @@ const UPLOAD_DIR = process.env.UPLOAD_DIR || path.join(process.cwd(), 'uploads',
 export async function checkNewEmails(): Promise<void> {
   console.log('[Email Receiver] Проверка новых писем...');
 
-  if (!emailConfig.password) {
-    console.error('[Email Receiver] IMAP пароль не настроен в переменных окружения');
+  if (!validateImapConfig()) {
+    console.error('[Email Receiver] IMAP не настроен, пропускаем проверку писем');
     return;
   }
 
