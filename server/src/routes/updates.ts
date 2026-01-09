@@ -109,7 +109,7 @@ router.post('/start', async (req: AuthRequest, res: Response) => {
     }
 
     const { version, downloadUrl } = validation.data;
-    const userId = req.user!.id;
+    const userId = req.userId!;
 
     // Проверяем лицензию
     const licenseCheck = await validateForUpdate(version);

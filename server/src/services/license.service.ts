@@ -207,7 +207,7 @@ async function validateOnline(
     throw new Error(`License server error: ${response.status}`);
   }
 
-  return await response.json();
+  return await response.json() as LicenseValidationResult;
 }
 
 /**

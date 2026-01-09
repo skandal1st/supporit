@@ -12,6 +12,19 @@ import crypto from 'crypto';
 
 // Конфигурация
 const GITHUB_REPO = process.env.GITHUB_REPO || 'username/supporit';
+
+// GitHub API types
+interface GitHubAsset {
+  name: string;
+  browser_download_url: string;
+}
+
+interface GitHubRelease {
+  tag_name: string;
+  published_at: string;
+  body: string | null;
+  assets: GitHubAsset[];
+}
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN || '';
 const PROJECT_DIR = process.env.PROJECT_DIR || '/opt/supporit';
 const BACKUP_DIR = process.env.BACKUP_DIR || '/opt/supporit/backups';
@@ -138,7 +151,7 @@ export async function checkForUpdates(): Promise<AvailableUpdate | null> {
       throw new Error(`GitHub API error: ${response.status}`);
     }
 
-    const release = await response.json();
+    const release = await response.json() as GitHubRelease;
     const latestVersion = release.tag_name.replace(/^v/, '');
 
     // Сравниваем версии
@@ -149,8 +162,7 @@ export async function checkForUpdates(): Promise<AvailableUpdate | null> {
 
     // Ищем архив в assets
     const asset = release.assets.find(
-      (a: { name: string }) =>
-        a.name.endsWith('.tar.gz') || a.name.endsWith('.zip')
+      (a) => a.name.endsWith('.tar.gz') || a.name.endsWith('.zip')
     );
 
     if (!asset) {
@@ -160,7 +172,7 @@ export async function checkForUpdates(): Promise<AvailableUpdate | null> {
 
     // Ищем checksum файл
     const checksumAsset = release.assets.find(
-      (a: { name: string }) => a.name.endsWith('.sha256')
+      (a) => a.name.endsWith('.sha256')
     );
 
     let checksum = '';
