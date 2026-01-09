@@ -3,7 +3,7 @@
  * Компонент управления обновлениями системы
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import {
   RefreshCw,
   Download,
@@ -15,16 +15,15 @@ import {
   Key,
   Shield,
   Server,
-  ExternalLink,
 } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
 import {
   updateService,
-  UpdateInfo,
-  AvailableUpdate,
-  UpdateProgress,
-  UpdateHistoryItem,
+  type UpdateInfo,
+  type AvailableUpdate,
+  type UpdateProgress,
+  type UpdateHistoryItem,
 } from '../../services/update.service';
 
 export const SystemUpdateSettings = () => {
