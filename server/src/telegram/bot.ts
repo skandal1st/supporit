@@ -1,5 +1,13 @@
 import { Telegraf } from "telegraf";
+import https from "https";
 import type { BotContext } from "./types.js";
+
+// Агент с принудительным IPv4 и увеличенными таймаутами
+const agent = new https.Agent({
+  family: 4, // Принудительно IPv4
+  keepAlive: true,
+  timeout: 60000,
+});
 import { requireLinkedAccount } from "./middleware/auth.js";
 import {
   handleStart,
@@ -56,7 +64,11 @@ export async function initTelegramBot(): Promise<Telegraf<BotContext> | null> {
   console.log("[Telegram Bot] Создание экземпляра Telegraf...");
 
   try {
-    bot = new Telegraf<BotContext>(token);
+    bot = new Telegraf<BotContext>(token, {
+      telegram: {
+        agent: agent,
+      },
+    });
 
     // Инициализируем state
     bot.use((ctx: BotContext, next: () => Promise<void>) => {
