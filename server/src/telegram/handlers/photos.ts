@@ -75,35 +75,47 @@ export async function handlePhoto(ctx: BotContext): Promise<void> {
     // Вариант 2: с предобработкой (чёрно-белое + контраст)
     if (!qrCode) {
       console.log("[Telegram Photos] Пробуем с предобработкой...");
-      const { data: procData, info: procInfo } = await sharp(imageBuffer)
-        .greyscale()
-        .normalise()
-        .sharpen()
-        .ensureAlpha()
-        .raw()
-        .toBuffer({ resolveWithObject: true });
+      try {
+        const { data: procData, info: procInfo } = await sharp(imageBuffer)
+          .greyscale()
+          .normalise()
+          .sharpen()
+          .ensureAlpha()
+          .raw()
+          .toBuffer({ resolveWithObject: true });
 
-      qrCode = jsQR(
-        new Uint8ClampedArray(procData.buffer),
-        procInfo.width,
-        procInfo.height,
-      );
+        qrCode = jsQR(
+          new Uint8ClampedArray(procData.buffer),
+          procInfo.width,
+          procInfo.height,
+        );
+      } catch (procError) {
+        console.log("[Telegram Photos] Ошибка при предобработке:", procError);
+      }
     }
 
     // Вариант 3: увеличенное изображение
     if (!qrCode) {
       console.log("[Telegram Photos] Пробуем с увеличением...");
-      const { data: resizedData, info: resizedInfo } = await sharp(imageBuffer)
-        .resize({ width: origInfo.width * 2, height: origInfo.height * 2 })
-        .ensureAlpha()
-        .raw()
-        .toBuffer({ resolveWithObject: true });
+      try {
+        const newWidth = Math.round(origInfo.width * 2);
+        const newHeight = Math.round(origInfo.height * 2);
+        const { data: resizedData, info: resizedInfo } = await sharp(
+          imageBuffer,
+        )
+          .resize(newWidth, newHeight, { fit: "fill" })
+          .ensureAlpha()
+          .raw()
+          .toBuffer({ resolveWithObject: true });
 
-      qrCode = jsQR(
-        new Uint8ClampedArray(resizedData.buffer),
-        resizedInfo.width,
-        resizedInfo.height,
-      );
+        qrCode = jsQR(
+          new Uint8ClampedArray(resizedData.buffer),
+          resizedInfo.width,
+          resizedInfo.height,
+        );
+      } catch (resizeError) {
+        console.log("[Telegram Photos] Ошибка при увеличении:", resizeError);
+      }
     }
 
     console.log(
