@@ -72,14 +72,14 @@ export async function handlePhoto(ctx: BotContext): Promise<void> {
       origInfo.height,
     );
 
-    // Вариант 2: с предобработкой (чёрно-белое + контраст)
+    // Вариант 2: с предобработкой (контраст и резкость, без greyscale)
     if (!qrCode) {
       console.log("[Telegram Photos] Пробуем с предобработкой...");
       try {
         const { data: procData, info: procInfo } = await sharp(imageBuffer)
-          .greyscale()
           .normalise()
           .sharpen()
+          .toColourspace("srgb")
           .ensureAlpha()
           .raw()
           .toBuffer({ resolveWithObject: true });
