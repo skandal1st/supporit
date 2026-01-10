@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { MessageCircle, Link2, Unlink, Bell, BellOff, Copy, CheckCircle, AlertCircle, RefreshCw } from 'lucide-react';
 import { Button } from '../ui/Button';
-import { telegramService, type TelegramStatus, type LinkCodeResponse } from '../../services/telegram.service';
+import { telegramService, type TelegramStatus, type LinkCodeResponse, type BotInfo } from '../../services/telegram.service';
 
 export const TelegramSettings = () => {
   const [status, setStatus] = useState<TelegramStatus | null>(null);
+  const [botInfo, setBotInfo] = useState<BotInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -14,25 +15,33 @@ export const TelegramSettings = () => {
   const [togglingNotifications, setTogglingNotifications] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const loadStatus = async () => {
+  const loadData = async () => {
     setLoading(true);
     setError(null);
     try {
-      const result = await telegramService.getStatus();
-      if (result.error) {
-        setError(result.error.message || 'Ошибка загрузки статуса');
+      const [statusResult, botInfoResult] = await Promise.all([
+        telegramService.getStatus(),
+        telegramService.getBotInfo(),
+      ]);
+
+      if (statusResult.error) {
+        setError(statusResult.error.message || 'Ошибка загрузки статуса');
       } else {
-        setStatus(result.data);
+        setStatus(statusResult.data);
+      }
+
+      if (botInfoResult.data) {
+        setBotInfo(botInfoResult.data);
       }
     } catch (err) {
-      setError('Произошла ошибка при загрузке статуса');
+      setError('Произошла ошибка при загрузке данных');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadStatus();
+    loadData();
   }, []);
 
   const handleGenerateLinkCode = async () => {
@@ -69,7 +78,7 @@ export const TelegramSettings = () => {
       } else {
         setSuccess('Telegram успешно отвязан');
         setStatus(null);
-        await loadStatus();
+        await loadData();
         setTimeout(() => setSuccess(null), 3000);
       }
     } catch (err) {
@@ -279,7 +288,7 @@ export const TelegramSettings = () => {
                     Инструкция по привязке:
                   </h3>
                   <ol className="list-decimal list-inside space-y-2 text-blue-800 dark:text-blue-300 text-sm">
-                    <li>Откройте бота <strong>@SupporITBot</strong> в Telegram</li>
+                    <li>Откройте бота <strong>@{botInfo?.bot_username || linkCode?.bot_username || 'бота'}</strong> в Telegram</li>
                     <li>Отправьте боту команду:</li>
                   </ol>
 
@@ -306,7 +315,7 @@ export const TelegramSettings = () => {
                     <RefreshCw className={`h-4 w-4 mr-2 ${generatingCode ? 'animate-spin' : ''}`} />
                     Новый код
                   </Button>
-                  <Button onClick={loadStatus} variant="secondary">
+                  <Button onClick={loadData} variant="secondary">
                     <RefreshCw className="h-4 w-4 mr-2" />
                     Проверить статус
                   </Button>
