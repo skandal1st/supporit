@@ -45,7 +45,7 @@ export async function initTelegramBot(): Promise<Telegraf<BotContext> | null> {
     bot = new Telegraf<BotContext>(token);
 
     // Инициализируем state
-    bot.use((ctx, next) => {
+    bot.use((ctx: BotContext, next: () => Promise<void>) => {
       ctx.state = ctx.state || {};
       return next();
     });

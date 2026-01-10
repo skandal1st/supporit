@@ -12,9 +12,31 @@ export interface LinkCodeResponse {
   code: string;
   expires_at: string;
   instructions: string;
+  bot_username: string | null;
+}
+
+export interface BotInfo {
+  bot_username: string | null;
+  bot_enabled: boolean;
+  bot_configured: boolean;
 }
 
 export const telegramService = {
+  // Получить информацию о боте
+  async getBotInfo(): Promise<{ data: BotInfo | null; error: Error | null }> {
+    try {
+      const { data, error } = await get<BotInfo>('/telegram/bot-info');
+
+      if (error || !data) {
+        return { data: null, error: error || new Error('Ошибка получения информации о боте') };
+      }
+
+      return { data, error: null };
+    } catch (error) {
+      return { data: null, error: error as Error };
+    }
+  },
+
   // Получить статус привязки Telegram
   async getStatus(): Promise<{ data: TelegramStatus | null; error: Error | null }> {
     try {

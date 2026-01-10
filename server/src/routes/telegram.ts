@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { pool } from '../config/database.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
-import { v4 as uuidv4 } from 'uuid';
+import { decrypt } from '../utils/encryption.js';
 
 const router = Router();
 
@@ -9,6 +9,42 @@ const router = Router();
 function generateLinkCode(): string {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
+
+// Получить username бота из БД
+async function getBotUsername(): Promise<string | null> {
+  try {
+    const result = await pool.query(
+      "SELECT setting_value FROM system_settings WHERE setting_key = 'telegram_bot_username'"
+    );
+    return result.rows[0]?.setting_value || null;
+  } catch {
+    return null;
+  }
+}
+
+// GET /api/telegram/bot-info - Получить информацию о боте (для UI)
+router.get('/bot-info', authenticate, async (req: Request, res: Response) => {
+  try {
+    const result = await pool.query(
+      `SELECT setting_key, setting_value FROM system_settings
+       WHERE setting_key IN ('telegram_bot_username', 'telegram_bot_enabled')`
+    );
+
+    const settings: Record<string, string | null> = {};
+    for (const row of result.rows) {
+      settings[row.setting_key] = row.setting_value;
+    }
+
+    res.json({
+      bot_username: settings.telegram_bot_username || null,
+      bot_enabled: settings.telegram_bot_enabled === 'true',
+      bot_configured: !!settings.telegram_bot_username,
+    });
+  } catch (error) {
+    console.error('[Telegram API] Ошибка получения информации о боте:', error);
+    res.status(500).json({ error: 'Ошибка получения информации о боте' });
+  }
+});
 
 // POST /api/telegram/generate-link-code - Генерация кода привязки
 router.post(
@@ -52,10 +88,15 @@ router.post(
         [userId, code, expiresAt]
       );
 
+      // Получаем username бота из настроек
+      const botUsername = await getBotUsername();
+      const botMention = botUsername ? `@${botUsername}` : 'боту';
+
       res.json({
         code,
         expires_at: expiresAt.toISOString(),
-        instructions: `Отправьте команду /link ${code} боту @SupporITBot`,
+        bot_username: botUsername,
+        instructions: `Отправьте команду /link ${code} ${botMention}`,
       });
     } catch (error) {
       console.error('[Telegram API] Ошибка генерации кода:', error);

@@ -1,4 +1,5 @@
 import { Context } from 'telegraf';
+import type { Update } from 'telegraf/types';
 
 export interface BotUser {
   id: string;
@@ -15,9 +16,9 @@ export interface BotState {
   pendingTicketEquipmentId?: string;
 }
 
-export interface BotContext extends Context {
+export type BotContext = Context<Update> & {
   state: BotState;
-}
+};
 
 export interface TicketData {
   id: string;
