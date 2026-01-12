@@ -39,6 +39,9 @@ export async function handleTicketsList(
   filter: string = "all",
 ): Promise<void> {
   try {
+    // Сразу отвечаем на callback, чтобы убрать "часики"
+    await ctx.answerCbQuery().catch(() => {});
+
     let whereClause = "status NOT IN ('closed', 'resolved', 'pending_user')";
 
     if (filter !== "all") {
@@ -74,10 +77,17 @@ export async function handleTicketsList(
                 ? "ожидающих"
                 : "";
 
-      await ctx.editMessageText(`📋 *Заявки*\n\nНет ${filterLabel} заявок.`, {
-        parse_mode: "Markdown",
-        ...ticketsFilterKeyboard,
-      });
+      try {
+        await ctx.editMessageText(`📋 *Заявки*\n\nНет ${filterLabel} заявок.`, {
+          parse_mode: "Markdown",
+          ...ticketsFilterKeyboard,
+        });
+      } catch {
+        await ctx.reply(`📋 *Заявки*\n\nНет ${filterLabel} заявок.`, {
+          parse_mode: "Markdown",
+          ...ticketsFilterKeyboard,
+        });
+      }
       return;
     }
 
@@ -86,13 +96,20 @@ export async function handleTicketsList(
       message += formatTicketListItem(t, i + 1) + "\n\n";
     });
 
-    await ctx.editMessageText(message, {
-      parse_mode: "Markdown",
-      ...ticketListKeyboard(tickets, filter),
-    });
+    try {
+      await ctx.editMessageText(message, {
+        parse_mode: "Markdown",
+        ...ticketListKeyboard(tickets, filter),
+      });
+    } catch {
+      await ctx.reply(message, {
+        parse_mode: "Markdown",
+        ...ticketListKeyboard(tickets, filter),
+      });
+    }
   } catch (error) {
     console.error("[Telegram Callbacks] Ошибка получения заявок:", error);
-    await ctx.answerCbQuery("Ошибка загрузки заявок");
+    await ctx.answerCbQuery("Ошибка загрузки заявок").catch(() => {});
   }
 }
 
