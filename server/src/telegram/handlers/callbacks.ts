@@ -12,7 +12,9 @@ import {
 import { formatTicketCard, formatTicketListItem } from "../utils/formatters.js";
 
 // Вспомогательная функция для получения полного UUID по короткому ID
-async function resolveTicketId(shortOrFullId: string): Promise<string | null> {
+export async function resolveTicketId(
+  shortOrFullId: string,
+): Promise<string | null> {
   if (shortOrFullId.length === 36) {
     return shortOrFullId; // Уже полный UUID
   }
