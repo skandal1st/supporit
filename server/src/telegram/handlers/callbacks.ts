@@ -1,5 +1,5 @@
-import { pool } from '../../config/database.js';
-import type { BotContext, TicketData, TicketStatus } from '../types.js';
+import { pool } from "../../config/database.js";
+import type { BotContext, TicketData, TicketStatus } from "../types.js";
 import {
   mainMenuKeyboard,
   ticketsFilterKeyboard,
@@ -8,21 +8,38 @@ import {
   ticketListKeyboard,
   settingsKeyboard,
   confirmUnlinkKeyboard,
-} from '../keyboards/inline.js';
-import { formatTicketCard, formatTicketListItem } from '../utils/formatters.js';
+} from "../keyboards/inline.js";
+import { formatTicketCard, formatTicketListItem } from "../utils/formatters.js";
 
-export async function handleMainMenu(ctx: BotContext): Promise<void> {
-  await ctx.editMessageText(
-    '🏠 *Главное меню*\n\nВыберите действие:',
-    { parse_mode: 'Markdown', ...mainMenuKeyboard }
+// Вспомогательная функция для получения полного UUID по короткому ID
+async function resolveTicketId(shortOrFullId: string): Promise<string | null> {
+  if (shortOrFullId.length === 36) {
+    return shortOrFullId; // Уже полный UUID
+  }
+
+  const result = await pool.query(
+    `SELECT id FROM tickets WHERE id::text LIKE $1 LIMIT 1`,
+    [`${shortOrFullId}%`],
   );
+
+  return result.rows.length > 0 ? result.rows[0].id : null;
 }
 
-export async function handleTicketsList(ctx: BotContext, filter: string = 'all'): Promise<void> {
+export async function handleMainMenu(ctx: BotContext): Promise<void> {
+  await ctx.editMessageText("🏠 *Главное меню*\n\nВыберите действие:", {
+    parse_mode: "Markdown",
+    ...mainMenuKeyboard,
+  });
+}
+
+export async function handleTicketsList(
+  ctx: BotContext,
+  filter: string = "all",
+): Promise<void> {
   try {
     let whereClause = "status NOT IN ('closed', 'resolved', 'pending_user')";
 
-    if (filter !== 'all') {
+    if (filter !== "all") {
       whereClause = `status = '${filter}'`;
     }
 
@@ -38,43 +55,48 @@ export async function handleTicketsList(ctx: BotContext, filter: string = 'all')
            WHEN 'low' THEN 4
          END,
          t.created_at DESC
-       LIMIT 10`
+       LIMIT 10`,
     );
 
     const tickets = result.rows;
 
     if (tickets.length === 0) {
       const filterLabel =
-        filter === 'all' ? 'активных' :
-        filter === 'new' ? 'новых' :
-        filter === 'in_progress' ? 'в работе' :
-        filter === 'waiting' ? 'ожидающих' : '';
+        filter === "all"
+          ? "активных"
+          : filter === "new"
+            ? "новых"
+            : filter === "in_progress"
+              ? "в работе"
+              : filter === "waiting"
+                ? "ожидающих"
+                : "";
 
-      await ctx.editMessageText(
-        `📋 *Заявки*\n\nНет ${filterLabel} заявок.`,
-        { parse_mode: 'Markdown', ...ticketsFilterKeyboard }
-      );
+      await ctx.editMessageText(`📋 *Заявки*\n\nНет ${filterLabel} заявок.`, {
+        parse_mode: "Markdown",
+        ...ticketsFilterKeyboard,
+      });
       return;
     }
 
     let message = `📋 *Активные заявки* (${tickets.length})\n\n`;
     tickets.forEach((t: TicketData, i: number) => {
-      message += formatTicketListItem(t, i + 1) + '\n\n';
+      message += formatTicketListItem(t, i + 1) + "\n\n";
     });
 
     await ctx.editMessageText(message, {
-      parse_mode: 'Markdown',
+      parse_mode: "Markdown",
       ...ticketListKeyboard(tickets, filter),
     });
   } catch (error) {
-    console.error('[Telegram Callbacks] Ошибка получения заявок:', error);
-    await ctx.answerCbQuery('Ошибка загрузки заявок');
+    console.error("[Telegram Callbacks] Ошибка получения заявок:", error);
+    await ctx.answerCbQuery("Ошибка загрузки заявок");
   }
 }
 
 export async function handleMyTickets(ctx: BotContext): Promise<void> {
   if (!ctx.state.user) {
-    await ctx.answerCbQuery('Ошибка авторизации');
+    await ctx.answerCbQuery("Ошибка авторизации");
     return;
   }
 
@@ -92,40 +114,41 @@ export async function handleMyTickets(ctx: BotContext): Promise<void> {
          END,
          t.created_at DESC
        LIMIT 10`,
-      [ctx.state.user.id]
+      [ctx.state.user.id],
     );
 
     const tickets = result.rows;
 
     if (tickets.length === 0) {
       await ctx.editMessageText(
-        '📋 *Мои заявки*\n\nУ вас нет назначенных активных заявок.',
-        { parse_mode: 'Markdown', ...mainMenuKeyboard }
+        "📋 *Мои заявки*\n\nУ вас нет назначенных активных заявок.",
+        { parse_mode: "Markdown", ...mainMenuKeyboard },
       );
       return;
     }
 
     let message = `📋 *Мои заявки* (${tickets.length})\n\n`;
     tickets.forEach((t: TicketData, i: number) => {
-      message += formatTicketListItem(t, i + 1) + '\n\n';
+      message += formatTicketListItem(t, i + 1) + "\n\n";
     });
 
     await ctx.editMessageText(message, {
-      parse_mode: 'Markdown',
-      ...ticketListKeyboard(tickets, 'my'),
+      parse_mode: "Markdown",
+      ...ticketListKeyboard(tickets, "my"),
     });
   } catch (error) {
-    console.error('[Telegram Callbacks] Ошибка получения моих заявок:', error);
-    await ctx.answerCbQuery('Ошибка загрузки заявок');
+    console.error("[Telegram Callbacks] Ошибка получения моих заявок:", error);
+    await ctx.answerCbQuery("Ошибка загрузки заявок");
   }
 }
 
-export async function showTicketDetails(ctx: BotContext, ticketId: string): Promise<void> {
+export async function showTicketDetails(
+  ctx: BotContext,
+  ticketId: string,
+): Promise<void> {
   try {
     // Поддержка как полного UUID, так и короткого ID
-    const idCondition = ticketId.length === 36
-      ? 'id = $1'
-      : 'id::text LIKE $1';
+    const idCondition = ticketId.length === 36 ? "id = $1" : "id::text LIKE $1";
     const idValue = ticketId.length === 36 ? ticketId : `${ticketId}%`;
 
     const result = await pool.query(
@@ -142,11 +165,11 @@ export async function showTicketDetails(ctx: BotContext, ticketId: string): Prom
        LEFT JOIN equipment e ON t.equipment_id = e.id
        WHERE t.${idCondition}
        LIMIT 1`,
-      [idValue]
+      [idValue],
     );
 
     if (result.rows.length === 0) {
-      const errorMsg = '❌ Заявка не найдена.';
+      const errorMsg = "❌ Заявка не найдена.";
       if (ctx.callbackQuery) {
         await ctx.editMessageText(errorMsg, mainMenuKeyboard);
       } else {
@@ -157,16 +180,22 @@ export async function showTicketDetails(ctx: BotContext, ticketId: string): Prom
 
     const ticket = result.rows[0] as TicketData;
     const message = formatTicketCard(ticket);
-    const keyboard = ticketActionsKeyboard(ticket.id, ticket.status as TicketStatus);
+    const keyboard = ticketActionsKeyboard(
+      ticket.id,
+      ticket.status as TicketStatus,
+    );
 
     if (ctx.callbackQuery) {
-      await ctx.editMessageText(message, { parse_mode: 'Markdown', ...keyboard });
+      await ctx.editMessageText(message, {
+        parse_mode: "Markdown",
+        ...keyboard,
+      });
     } else {
-      await ctx.reply(message, { parse_mode: 'Markdown', ...keyboard });
+      await ctx.reply(message, { parse_mode: "Markdown", ...keyboard });
     }
   } catch (error) {
-    console.error('[Telegram Callbacks] Ошибка получения заявки:', error);
-    const errorMsg = 'Ошибка загрузки заявки.';
+    console.error("[Telegram Callbacks] Ошибка получения заявки:", error);
+    const errorMsg = "Ошибка загрузки заявки.";
     if (ctx.callbackQuery) {
       await ctx.answerCbQuery(errorMsg);
     } else {
@@ -175,13 +204,23 @@ export async function showTicketDetails(ctx: BotContext, ticketId: string): Prom
   }
 }
 
-export async function handleTakeTicket(ctx: BotContext, ticketId: string): Promise<void> {
+export async function handleTakeTicket(
+  ctx: BotContext,
+  ticketId: string,
+): Promise<void> {
   if (!ctx.state.user) {
-    await ctx.answerCbQuery('Ошибка авторизации');
+    await ctx.answerCbQuery("Ошибка авторизации");
     return;
   }
 
   try {
+    // Получаем полный UUID по короткому ID
+    const fullId = await resolveTicketId(ticketId);
+    if (!fullId) {
+      await ctx.answerCbQuery("Заявка не найдена");
+      return;
+    }
+
     const result = await pool.query(
       `UPDATE tickets
        SET status = 'in_progress',
@@ -189,148 +228,182 @@ export async function handleTakeTicket(ctx: BotContext, ticketId: string): Promi
            updated_at = NOW()
        WHERE id = $2 AND status = 'new'
        RETURNING id`,
-      [ctx.state.user.id, ticketId]
+      [ctx.state.user.id, fullId],
     );
 
     if (result.rows.length === 0) {
-      await ctx.answerCbQuery('Заявка уже взята в работу или не найдена');
+      await ctx.answerCbQuery("Заявка уже взята в работу или не найдена");
       return;
     }
 
-    await ctx.answerCbQuery('✅ Заявка взята в работу');
-    await showTicketDetails(ctx, ticketId);
+    await ctx.answerCbQuery("✅ Заявка взята в работу");
+    await showTicketDetails(ctx, fullId);
   } catch (error) {
-    console.error('[Telegram Callbacks] Ошибка взятия заявки:', error);
-    await ctx.answerCbQuery('Ошибка при взятии заявки');
+    console.error("[Telegram Callbacks] Ошибка взятия заявки:", error);
+    await ctx.answerCbQuery("Ошибка при взятии заявки");
   }
 }
 
-export async function handleShowStatusMenu(ctx: BotContext, ticketId: string): Promise<void> {
+export async function handleShowStatusMenu(
+  ctx: BotContext,
+  ticketId: string,
+): Promise<void> {
   try {
+    // Получаем полный UUID по короткому ID
+    const fullId = await resolveTicketId(ticketId);
+    if (!fullId) {
+      await ctx.answerCbQuery("Заявка не найдена");
+      return;
+    }
+
     const result = await pool.query(
       `SELECT status FROM tickets WHERE id = $1`,
-      [ticketId]
+      [fullId],
     );
 
     if (result.rows.length === 0) {
-      await ctx.answerCbQuery('Заявка не найдена');
+      await ctx.answerCbQuery("Заявка не найдена");
       return;
     }
 
     const currentStatus = result.rows[0].status as TicketStatus;
 
     await ctx.editMessageText(
-      '📊 *Изменение статуса*\n\nВыберите новый статус:',
-      { parse_mode: 'Markdown', ...ticketStatusKeyboard(ticketId, currentStatus) }
+      "📊 *Изменение статуса*\n\nВыберите новый статус:",
+      {
+        parse_mode: "Markdown",
+        ...ticketStatusKeyboard(fullId, currentStatus),
+      },
     );
   } catch (error) {
-    console.error('[Telegram Callbacks] Ошибка показа меню статуса:', error);
-    await ctx.answerCbQuery('Ошибка загрузки');
+    console.error("[Telegram Callbacks] Ошибка показа меню статуса:", error);
+    await ctx.answerCbQuery("Ошибка загрузки");
   }
 }
 
 export async function handleSetStatus(
   ctx: BotContext,
   ticketId: string,
-  newStatus: TicketStatus
+  newStatus: TicketStatus,
 ): Promise<void> {
   if (!ctx.state.user) {
-    await ctx.answerCbQuery('Ошибка авторизации');
+    await ctx.answerCbQuery("Ошибка авторизации");
     return;
   }
 
   try {
+    // Получаем полный UUID по короткому ID
+    const fullId = await resolveTicketId(ticketId);
+    if (!fullId) {
+      await ctx.answerCbQuery("Заявка не найдена");
+      return;
+    }
+
     const updateData: Record<string, any> = {
       status: newStatus,
       updated_at: new Date().toISOString(),
     };
 
     // Устанавливаем даты при изменении статуса
-    if (newStatus === 'resolved') {
+    if (newStatus === "resolved") {
       updateData.resolved_at = new Date().toISOString();
-    } else if (newStatus === 'closed') {
+    } else if (newStatus === "closed") {
       updateData.closed_at = new Date().toISOString();
     }
 
     // Назначаем исполнителя при взятии в работу
-    if (newStatus === 'in_progress') {
+    if (newStatus === "in_progress") {
       updateData.assignee_id = ctx.state.user.id;
     }
 
     const setClauses = Object.keys(updateData)
       .map((key, i) => `${key} = $${i + 2}`)
-      .join(', ');
-    const values = [ticketId, ...Object.values(updateData)];
+      .join(", ");
+    const values = [fullId, ...Object.values(updateData)];
 
-    await pool.query(
-      `UPDATE tickets SET ${setClauses} WHERE id = $1`,
-      values
-    );
+    await pool.query(`UPDATE tickets SET ${setClauses} WHERE id = $1`, values);
 
     const statusLabels: Record<string, string> = {
-      new: 'Новая',
-      in_progress: 'В работе',
-      waiting: 'Ожидание',
-      resolved: 'Решена',
-      closed: 'Закрыта',
+      new: "Новая",
+      in_progress: "В работе",
+      waiting: "Ожидание",
+      resolved: "Решена",
+      closed: "Закрыта",
     };
 
-    await ctx.answerCbQuery(`✅ Статус изменён на "${statusLabels[newStatus]}"`);
-    await showTicketDetails(ctx, ticketId);
+    await ctx.answerCbQuery(
+      `✅ Статус изменён на "${statusLabels[newStatus]}"`,
+    );
+    await showTicketDetails(ctx, fullId);
   } catch (error) {
-    console.error('[Telegram Callbacks] Ошибка изменения статуса:', error);
-    await ctx.answerCbQuery('Ошибка при изменении статуса');
+    console.error("[Telegram Callbacks] Ошибка изменения статуса:", error);
+    await ctx.answerCbQuery("Ошибка при изменении статуса");
   }
 }
 
-export async function handleCommentPrompt(ctx: BotContext, ticketId: string): Promise<void> {
-  // Сохраняем ID заявки в сессии для последующего добавления комментария
-  ctx.state.pendingCommentTicketId = ticketId;
+export async function handleCommentPrompt(
+  ctx: BotContext,
+  ticketId: string,
+): Promise<void> {
+  // Получаем полный UUID по короткому ID
+  const fullId = await resolveTicketId(ticketId);
+  if (!fullId) {
+    await ctx.answerCbQuery("Заявка не найдена");
+    return;
+  }
 
+  // Сохраняем полный ID заявки в сессии для последующего добавления комментария
+  ctx.state.pendingCommentTicketId = fullId;
+
+  const shortId = fullId.slice(0, 8);
   await ctx.editMessageText(
-    '💬 *Добавление комментария*\n\n' +
-    `Заявка: #${ticketId.slice(0, 8)}\n\n` +
-    'Отправьте текст комментария следующим сообщением.\n\n' +
-    '_Для отмены нажмите кнопку ниже._',
+    "💬 *Добавление комментария*\n\n" +
+      `Заявка: #${shortId}\n\n` +
+      "Отправьте текст комментария следующим сообщением.\n\n" +
+      "_Для отмены нажмите кнопку ниже._",
     {
-      parse_mode: 'Markdown',
+      parse_mode: "Markdown",
       reply_markup: {
-        inline_keyboard: [[{ text: '❌ Отмена', callback_data: `ticket_view_${ticketId}` }]],
+        inline_keyboard: [
+          [{ text: "❌ Отмена", callback_data: `t_view_${shortId}` }],
+        ],
       },
-    }
+    },
   );
 }
 
 export async function showSettings(ctx: BotContext): Promise<void> {
   if (!ctx.state.user) {
-    await ctx.answerCbQuery('Ошибка авторизации');
+    await ctx.answerCbQuery("Ошибка авторизации");
     return;
   }
 
   const notificationsEnabled = ctx.state.user.telegram_notifications;
 
   const message =
-    '⚙️ *Настройки*\n\n' +
-    `🔔 Уведомления: ${notificationsEnabled ? 'Включены' : 'Выключены'}\n` +
+    "⚙️ *Настройки*\n\n" +
+    `🔔 Уведомления: ${notificationsEnabled ? "Включены" : "Выключены"}\n` +
     `👤 Аккаунт: ${ctx.state.user.full_name}\n` +
     `📧 Email: ${ctx.state.user.email}`;
 
   if (ctx.callbackQuery) {
     await ctx.editMessageText(message, {
-      parse_mode: 'Markdown',
+      parse_mode: "Markdown",
       ...settingsKeyboard(notificationsEnabled),
     });
   } else {
     await ctx.reply(message, {
-      parse_mode: 'Markdown',
+      parse_mode: "Markdown",
       ...settingsKeyboard(notificationsEnabled),
     });
   }
 }
 
-export async function handleToggleNotifications(ctx: BotContext): Promise<void> {
+export async function handleToggleNotifications(
+  ctx: BotContext,
+): Promise<void> {
   if (!ctx.state.user) {
-    await ctx.answerCbQuery('Ошибка авторизации');
+    await ctx.answerCbQuery("Ошибка авторизации");
     return;
   }
 
@@ -339,34 +412,37 @@ export async function handleToggleNotifications(ctx: BotContext): Promise<void> 
 
     await pool.query(
       `UPDATE users SET telegram_notifications = $1 WHERE id = $2`,
-      [newValue, ctx.state.user.id]
+      [newValue, ctx.state.user.id],
     );
 
     ctx.state.user.telegram_notifications = newValue;
 
     await ctx.answerCbQuery(
-      newValue ? '🔔 Уведомления включены' : '🔕 Уведомления выключены'
+      newValue ? "🔔 Уведомления включены" : "🔕 Уведомления выключены",
     );
 
     await showSettings(ctx);
   } catch (error) {
-    console.error('[Telegram Callbacks] Ошибка переключения уведомлений:', error);
-    await ctx.answerCbQuery('Ошибка сохранения настроек');
+    console.error(
+      "[Telegram Callbacks] Ошибка переключения уведомлений:",
+      error,
+    );
+    await ctx.answerCbQuery("Ошибка сохранения настроек");
   }
 }
 
 export async function handleUnlinkPrompt(ctx: BotContext): Promise<void> {
   await ctx.editMessageText(
-    '⚠️ *Отвязка аккаунта*\n\n' +
-    'Вы уверены, что хотите отвязать Telegram от аккаунта SupporIT?\n\n' +
-    'После отвязки вы перестанете получать уведомления.',
-    { parse_mode: 'Markdown', ...confirmUnlinkKeyboard }
+    "⚠️ *Отвязка аккаунта*\n\n" +
+      "Вы уверены, что хотите отвязать Telegram от аккаунта SupporIT?\n\n" +
+      "После отвязки вы перестанете получать уведомления.",
+    { parse_mode: "Markdown", ...confirmUnlinkKeyboard },
   );
 }
 
 export async function handleConfirmUnlink(ctx: BotContext): Promise<void> {
   if (!ctx.state.user) {
-    await ctx.answerCbQuery('Ошибка авторизации');
+    await ctx.answerCbQuery("Ошибка авторизации");
     return;
   }
 
@@ -378,15 +454,15 @@ export async function handleConfirmUnlink(ctx: BotContext): Promise<void> {
            telegram_linked_at = NULL,
            telegram_notifications = false
        WHERE id = $1`,
-      [ctx.state.user.id]
+      [ctx.state.user.id],
     );
 
     await ctx.editMessageText(
-      '✅ Аккаунт успешно отвязан.\n\n' +
-      'Для повторной привязки используйте команду /link <код>'
+      "✅ Аккаунт успешно отвязан.\n\n" +
+        "Для повторной привязки используйте команду /link <код>",
     );
   } catch (error) {
-    console.error('[Telegram Callbacks] Ошибка отвязки:', error);
-    await ctx.answerCbQuery('Ошибка при отвязке аккаунта');
+    console.error("[Telegram Callbacks] Ошибка отвязки:", error);
+    await ctx.answerCbQuery("Ошибка при отвязке аккаунта");
   }
 }
