@@ -226,24 +226,22 @@ export async function initTelegramBot(): Promise<Telegraf<BotContext> | null> {
     // Обработчик текстовых сообщений
     bot.on("text", requireLinkedAccount, handleTextMessage);
 
-    // Запускаем бота в режиме long polling с таймаутом
+    // Запускаем бота в режиме long polling
     console.log("[Telegram Bot] Запуск long polling...");
 
-    // Добавляем таймаут на случай если launch зависнет
-    const launchPromise = bot.launch({
-      dropPendingUpdates: true, // Игнорируем старые сообщения
-    });
+    // Запускаем без ожидания - launch() не возвращает промис который резолвится
+    bot
+      .launch({
+        dropPendingUpdates: true, // Игнорируем старые сообщения
+      })
+      .catch((err) => {
+        console.error("[Telegram Bot] Ошибка в процессе работы бота:", err);
+      });
 
-    const timeoutPromise = new Promise<never>((_, reject) => {
-      setTimeout(
-        () => reject(new Error("Таймаут запуска бота (30 сек)")),
-        30000,
-      );
-    });
+    // Даём немного времени на инициализацию
+    await new Promise((resolve) => setTimeout(resolve, 2000));
 
-    await Promise.race([launchPromise, timeoutPromise]);
-
-    console.log("[Telegram Bot] Бот успешно запущен");
+    console.log("[Telegram Bot] Бот запущен");
 
     return bot;
   } catch (error) {
