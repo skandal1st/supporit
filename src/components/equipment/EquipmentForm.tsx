@@ -1,20 +1,29 @@
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { useEffect, useState } from 'react';
-import type { Equipment, Building, User } from '../../types';
-import { Button } from '../ui/Button';
-import { buildingsService } from '../../services/buildings.service';
-import { usersService } from '../../services/users.service';
-import { ZabbixStatus } from './ZabbixStatus';
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { useEffect, useState } from "react";
+import type { Equipment, Building, User, Room } from "../../types";
+import { Button } from "../ui/Button";
+import { buildingsService } from "../../services/buildings.service";
+import { usersService } from "../../services/users.service";
+import { ZabbixStatus } from "./ZabbixStatus";
 
 const equipmentSchema = z.object({
-  name: z.string().min(1, 'Название обязательно'),
+  name: z.string().min(1, "Название обязательно"),
   model: z.string().optional(),
-  inventory_number: z.string().min(1, 'Инвентарный номер обязателен'),
+  inventory_number: z.string().min(1, "Инвентарный номер обязателен"),
   serial_number: z.string().optional(),
-  category: z.enum(['computer', 'monitor', 'printer', 'network', 'server', 'mobile', 'peripheral', 'other']),
-  status: z.enum(['in_use', 'in_stock', 'in_repair', 'written_off']),
+  category: z.enum([
+    "computer",
+    "monitor",
+    "printer",
+    "network",
+    "server",
+    "mobile",
+    "peripheral",
+    "other",
+  ]),
+  status: z.enum(["in_use", "in_stock", "in_repair", "written_off"]),
   purchase_date: z.string().optional(),
   cost: z.number().optional().nullable(),
   warranty_until: z.string().optional(),
@@ -35,21 +44,21 @@ interface EquipmentFormProps {
 }
 
 // Компонент для дополнительных полей в зависимости от категории
-const EquipmentCategoryFields = ({ 
-  category, 
+const EquipmentCategoryFields = ({
+  category,
   specifications,
   register,
   setValue,
-  watch
-}: { 
-  category: string; 
+  watch,
+}: {
+  category: string;
   specifications?: Record<string, any>;
   register: any;
   setValue: any;
   watch: any;
 }) => {
   const specData = specifications || {};
-  
+
   // Устанавливаем значения по умолчанию при изменении категории или при загрузке
   useEffect(() => {
     if (specData && Object.keys(specData).length > 0) {
@@ -59,11 +68,17 @@ const EquipmentCategoryFields = ({
     }
   }, [specData, setValue]);
 
-  if (category === 'printer') {
-    const printType = watch('specifications.print_type') || specData.print_type || 'laser';
-    const isColor = watch('specifications.is_color') === 'true' || watch('specifications.is_color') === true || specData.is_color === true || specData.is_color === 'true';
-    const isLaser = printType === 'laser';
-    const cartridgeType = watch('specifications.cartridge_type') || specData.cartridge_type || '';
+  if (category === "printer") {
+    const printType =
+      watch("specifications.print_type") || specData.print_type || "laser";
+    const isColor =
+      watch("specifications.is_color") === "true" ||
+      watch("specifications.is_color") === true ||
+      specData.is_color === true ||
+      specData.is_color === "true";
+    const isLaser = printType === "laser";
+    const cartridgeType =
+      watch("specifications.cartridge_type") || specData.cartridge_type || "";
 
     // Определяем, какие расходники нужны
     const needsDrum = isLaser; // Фотобарабан нужен для лазерных принтеров
@@ -77,11 +92,11 @@ const EquipmentCategoryFields = ({
               Тип печати
             </label>
             <select
-              {...register('specifications.print_type')}
+              {...register("specifications.print_type")}
               name="specifications.print_type"
-              defaultValue={specData.print_type || 'laser'}
+              defaultValue={specData.print_type || "laser"}
               onChange={(e) => {
-                setValue('specifications.print_type', e.target.value);
+                setValue("specifications.print_type", e.target.value);
               }}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
             >
@@ -95,11 +110,17 @@ const EquipmentCategoryFields = ({
               Цветная печать
             </label>
             <select
-              {...register('specifications.is_color')}
+              {...register("specifications.is_color")}
               name="specifications.is_color"
-              defaultValue={specData.is_color !== undefined ? (specData.is_color ? 'true' : 'false') : 'false'}
+              defaultValue={
+                specData.is_color !== undefined
+                  ? specData.is_color
+                    ? "true"
+                    : "false"
+                  : "false"
+              }
               onChange={(e) => {
-                setValue('specifications.is_color', e.target.value);
+                setValue("specifications.is_color", e.target.value);
               }}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
             >
@@ -112,10 +133,10 @@ const EquipmentCategoryFields = ({
               Тип картриджа
             </label>
             <input
-              {...register('specifications.cartridge_type')}
+              {...register("specifications.cartridge_type")}
               name="specifications.cartridge_type"
               type="text"
-              defaultValue={specData.cartridge_type || ''}
+              defaultValue={specData.cartridge_type || ""}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
               placeholder="Например: HP 85A"
             />
@@ -125,9 +146,9 @@ const EquipmentCategoryFields = ({
               Формат бумаги
             </label>
             <select
-              {...register('specifications.paper_format')}
+              {...register("specifications.paper_format")}
               name="specifications.paper_format"
-              defaultValue={specData.paper_format || 'A4'}
+              defaultValue={specData.paper_format || "A4"}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
             >
               <option value="A4">A4</option>
@@ -143,7 +164,7 @@ const EquipmentCategoryFields = ({
           <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
             Расходные материалы для принтера
           </h3>
-          
+
           {/* Фотобарабан для лазерных принтеров */}
           {needsDrum && (
             <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
@@ -151,10 +172,10 @@ const EquipmentCategoryFields = ({
                 Фотобарабан
               </label>
               <input
-                {...register('specifications.drum_model')}
+                {...register("specifications.drum_model")}
                 name="specifications.drum_model"
                 type="text"
-                defaultValue={specData.drum_model || ''}
+                defaultValue={specData.drum_model || ""}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 placeholder="Например: HP 85A Drum"
               />
@@ -174,7 +195,7 @@ const EquipmentCategoryFields = ({
                     Картридж чёрный
                   </label>
                   <input
-                    {...register('specifications.cartridge_black')}
+                    {...register("specifications.cartridge_black")}
                     name="specifications.cartridge_black"
                     type="text"
                     defaultValue={specData.cartridge_black || cartridgeType}
@@ -187,10 +208,10 @@ const EquipmentCategoryFields = ({
                     Картридж голубой (Cyan)
                   </label>
                   <input
-                    {...register('specifications.cartridge_cyan')}
+                    {...register("specifications.cartridge_cyan")}
                     name="specifications.cartridge_cyan"
                     type="text"
-                    defaultValue={specData.cartridge_cyan || ''}
+                    defaultValue={specData.cartridge_cyan || ""}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                     placeholder="Например: HP 85A Cyan"
                   />
@@ -200,10 +221,10 @@ const EquipmentCategoryFields = ({
                     Картридж пурпурный (Magenta)
                   </label>
                   <input
-                    {...register('specifications.cartridge_magenta')}
+                    {...register("specifications.cartridge_magenta")}
                     name="specifications.cartridge_magenta"
                     type="text"
-                    defaultValue={specData.cartridge_magenta || ''}
+                    defaultValue={specData.cartridge_magenta || ""}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                     placeholder="Например: HP 85A Magenta"
                   />
@@ -213,10 +234,10 @@ const EquipmentCategoryFields = ({
                     Картридж жёлтый (Yellow)
                   </label>
                   <input
-                    {...register('specifications.cartridge_yellow')}
+                    {...register("specifications.cartridge_yellow")}
                     name="specifications.cartridge_yellow"
                     type="text"
-                    defaultValue={specData.cartridge_yellow || ''}
+                    defaultValue={specData.cartridge_yellow || ""}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                     placeholder="Например: HP 85A Yellow"
                   />
@@ -229,7 +250,7 @@ const EquipmentCategoryFields = ({
                   Картридж чёрный
                 </label>
                 <input
-                  {...register('specifications.cartridge_black')}
+                  {...register("specifications.cartridge_black")}
                   name="specifications.cartridge_black"
                   type="text"
                   defaultValue={specData.cartridge_black || cartridgeType}
@@ -244,7 +265,7 @@ const EquipmentCategoryFields = ({
     );
   }
 
-  if (category === 'computer') {
+  if (category === "computer") {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-gray-200 dark:border-gray-700">
         <div>
@@ -252,10 +273,10 @@ const EquipmentCategoryFields = ({
             Процессор
           </label>
           <input
-            {...register('specifications.cpu')}
+            {...register("specifications.cpu")}
             name="specifications.cpu"
             type="text"
-            defaultValue={specData.cpu || ''}
+            defaultValue={specData.cpu || ""}
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
             placeholder="Например: Intel Core i5-10400"
           />
@@ -265,10 +286,10 @@ const EquipmentCategoryFields = ({
             Оперативная память (ГБ)
           </label>
           <input
-            {...register('specifications.ram')}
+            {...register("specifications.ram")}
             name="specifications.ram"
             type="number"
-            defaultValue={specData.ram || ''}
+            defaultValue={specData.ram || ""}
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
             placeholder="Например: 16"
           />
@@ -278,10 +299,10 @@ const EquipmentCategoryFields = ({
             Жесткий диск (ГБ)
           </label>
           <input
-            {...register('specifications.storage')}
+            {...register("specifications.storage")}
             name="specifications.storage"
             type="number"
-            defaultValue={specData.storage || ''}
+            defaultValue={specData.storage || ""}
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
             placeholder="Например: 512"
           />
@@ -291,10 +312,10 @@ const EquipmentCategoryFields = ({
             Видеокарта
           </label>
           <input
-            {...register('specifications.gpu')}
+            {...register("specifications.gpu")}
             name="specifications.gpu"
             type="text"
-            defaultValue={specData.gpu || ''}
+            defaultValue={specData.gpu || ""}
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
             placeholder="Например: NVIDIA GTX 1660"
           />
@@ -303,7 +324,7 @@ const EquipmentCategoryFields = ({
     );
   }
 
-  if (category === 'monitor') {
+  if (category === "monitor") {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-gray-200 dark:border-gray-700">
         <div>
@@ -311,10 +332,10 @@ const EquipmentCategoryFields = ({
             Диагональ (дюймы)
           </label>
           <input
-            {...register('specifications.screen_size')}
+            {...register("specifications.screen_size")}
             name="specifications.screen_size"
             type="number"
-            defaultValue={specData.screen_size || ''}
+            defaultValue={specData.screen_size || ""}
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
             placeholder="Например: 24"
           />
@@ -324,9 +345,9 @@ const EquipmentCategoryFields = ({
             Разрешение
           </label>
           <select
-            {...register('specifications.resolution')}
+            {...register("specifications.resolution")}
             name="specifications.resolution"
-            defaultValue={specData.resolution || '1920x1080'}
+            defaultValue={specData.resolution || "1920x1080"}
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
           >
             <option value="1920x1080">1920x1080 (Full HD)</option>
@@ -342,9 +363,19 @@ const EquipmentCategoryFields = ({
   return null;
 };
 
-export const EquipmentForm = ({ equipment, onSubmit, onCancel, loading }: EquipmentFormProps) => {
+export const EquipmentForm = ({
+  equipment,
+  onSubmit,
+  onCancel,
+  loading,
+}: EquipmentFormProps) => {
   const [buildings, setBuildings] = useState<Building[]>([]);
   const [loadingBuildings, setLoadingBuildings] = useState(false);
+  const [rooms, setRooms] = useState<Room[]>([]);
+  const [loadingRooms, setLoadingRooms] = useState(false);
+  const [selectedBuildingId, setSelectedBuildingId] = useState<string | null>(
+    null,
+  );
   const [users, setUsers] = useState<User[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
 
@@ -360,35 +391,41 @@ export const EquipmentForm = ({ equipment, onSubmit, onCancel, loading }: Equipm
     defaultValues: equipment
       ? {
           name: equipment.name,
-          model: equipment.model || '',
+          model: equipment.model || "",
           inventory_number: equipment.inventory_number,
-          serial_number: equipment.serial_number || '',
+          serial_number: equipment.serial_number || "",
           category: equipment.category,
           status: equipment.status,
-          purchase_date: equipment.purchase_date ? new Date(equipment.purchase_date).toISOString().split('T')[0] : '',
+          purchase_date: equipment.purchase_date
+            ? new Date(equipment.purchase_date).toISOString().split("T")[0]
+            : "",
           cost: equipment.cost || null,
-          warranty_until: equipment.warranty_until ? new Date(equipment.warranty_until).toISOString().split('T')[0] : '',
+          warranty_until: equipment.warranty_until
+            ? new Date(equipment.warranty_until).toISOString().split("T")[0]
+            : "",
           current_owner_id: equipment.current_owner_id || null,
-          location_department: equipment.location_department || '',
-          location_room: equipment.location_room || '',
-          manufacturer: equipment.manufacturer || '',
-          ip_address: equipment.ip_address || '',
+          location_department: equipment.location_department || "",
+          location_room: equipment.location_room || "",
+          manufacturer: equipment.manufacturer || "",
+          ip_address: equipment.ip_address || "",
         }
       : {
-          status: 'in_stock',
-          category: 'computer',
+          status: "in_stock",
+          category: "computer",
         },
   });
 
   // Функция для преобразования даты в формат yyyy-MM-dd
-  const formatDateForInput = (dateString: string | undefined | null): string => {
-    if (!dateString) return '';
+  const formatDateForInput = (
+    dateString: string | undefined | null,
+  ): string => {
+    if (!dateString) return "";
     try {
       const date = new Date(dateString);
-      if (isNaN(date.getTime())) return '';
-      return date.toISOString().split('T')[0];
+      if (isNaN(date.getTime())) return "";
+      return date.toISOString().split("T")[0];
     } catch {
-      return '';
+      return "";
     }
   };
 
@@ -400,15 +437,47 @@ export const EquipmentForm = ({ equipment, onSubmit, onCancel, loading }: Equipm
         const { data, error } = await buildingsService.getBuildings(true); // Только активные
         if (!error && data) {
           setBuildings(data);
+          // Если редактируем оборудование, находим здание и загружаем кабинеты
+          if (equipment?.location_department) {
+            const building = data.find(
+              (b: Building) => b.name === equipment.location_department,
+            );
+            if (building) {
+              setSelectedBuildingId(building.id);
+            }
+          }
         }
       } catch (err) {
-        console.error('Ошибка загрузки зданий:', err);
+        console.error("Ошибка загрузки зданий:", err);
       } finally {
         setLoadingBuildings(false);
       }
     };
     loadBuildings();
-  }, []);
+  }, [equipment]);
+
+  // Загружаем кабинеты при выборе здания
+  useEffect(() => {
+    const loadRooms = async () => {
+      if (selectedBuildingId) {
+        setLoadingRooms(true);
+        try {
+          const { data, error } =
+            await buildingsService.getRooms(selectedBuildingId);
+          if (!error && data) {
+            setRooms(data.filter((r: Room) => r.is_active));
+          }
+        } catch (err) {
+          console.error("Ошибка загрузки кабинетов:", err);
+        } finally {
+          setLoadingRooms(false);
+        }
+      } else {
+        setRooms([]);
+      }
+    };
+    loadRooms();
+  }, [selectedBuildingId]);
 
   // Загружаем список пользователей при монтировании компонента
   useEffect(() => {
@@ -420,7 +489,7 @@ export const EquipmentForm = ({ equipment, onSubmit, onCancel, loading }: Equipm
           setUsers(data);
         }
       } catch (err) {
-        console.error('Ошибка загрузки пользователей:', err);
+        console.error("Ошибка загрузки пользователей:", err);
       } finally {
         setLoadingUsers(false);
       }
@@ -432,23 +501,26 @@ export const EquipmentForm = ({ equipment, onSubmit, onCancel, loading }: Equipm
     if (equipment) {
       const formData: any = {
         name: equipment.name,
-        model: equipment.model || '',
+        model: equipment.model || "",
         inventory_number: equipment.inventory_number,
-        serial_number: equipment.serial_number || '',
+        serial_number: equipment.serial_number || "",
         category: equipment.category,
         status: equipment.status,
         purchase_date: formatDateForInput(equipment.purchase_date),
         cost: equipment.cost || null,
         warranty_until: formatDateForInput(equipment.warranty_until),
         current_owner_id: equipment.current_owner_id || null,
-        location_department: equipment.location_department || '',
-        location_room: equipment.location_room || '',
-        manufacturer: equipment.manufacturer || '',
-        ip_address: equipment.ip_address || '',
+        location_department: equipment.location_department || "",
+        location_room: equipment.location_room || "",
+        manufacturer: equipment.manufacturer || "",
+        ip_address: equipment.ip_address || "",
       };
 
       // Устанавливаем значения specifications в форму
-      if (equipment.specifications && typeof equipment.specifications === 'object') {
+      if (
+        equipment.specifications &&
+        typeof equipment.specifications === "object"
+      ) {
         Object.keys(equipment.specifications).forEach((key) => {
           formData[`specifications.${key}`] = equipment.specifications![key];
         });
@@ -462,27 +534,37 @@ export const EquipmentForm = ({ equipment, onSubmit, onCancel, loading }: Equipm
   const onSubmitForm = (data: any, event?: React.BaseSyntheticEvent) => {
     // Собираем все поля specifications.* в объект
     const specifications: Record<string, any> = {};
-    
+
     // Получаем форму из события
     const form = event?.target as HTMLFormElement;
-    
+
     if (form) {
-      console.log('Форма найдена, начинаем сбор данных...');
-      
+      console.log("Форма найдена, начинаем сбор данных...");
+
       // Используем FormData для надежности - это основной способ
       const formData = new FormData(form);
-      console.log('FormData entries:', Array.from(formData.entries()));
-      
+      console.log("FormData entries:", Array.from(formData.entries()));
+
       for (const [key, value] of formData.entries()) {
-        if (key && key.startsWith('specifications.')) {
-          const specKey = key.replace('specifications.', '');
+        if (key && key.startsWith("specifications.")) {
+          const specKey = key.replace("specifications.", "");
           const stringValue = value.toString();
-          
-          console.log(`Найдено поле specifications: ${specKey} = ${stringValue}`);
-          
-          if (stringValue !== null && stringValue !== undefined && stringValue !== '') {
+
+          console.log(
+            `Найдено поле specifications: ${specKey} = ${stringValue}`,
+          );
+
+          if (
+            stringValue !== null &&
+            stringValue !== undefined &&
+            stringValue !== ""
+          ) {
             // Преобразуем числовые строки в числа для числовых полей
-            if (specKey === 'ram' || specKey === 'storage' || specKey === 'screen_size') {
+            if (
+              specKey === "ram" ||
+              specKey === "storage" ||
+              specKey === "screen_size"
+            ) {
               const numValue = Number(stringValue);
               if (!isNaN(numValue)) {
                 specifications[specKey] = numValue;
@@ -493,32 +575,37 @@ export const EquipmentForm = ({ equipment, onSubmit, onCancel, loading }: Equipm
           }
         }
       }
-      
+
       // Дополнительно проверяем через элементы формы (на случай, если FormData не сработал)
       const formElements = form.elements;
       for (let i = 0; i < formElements.length; i++) {
         const element = formElements[i] as HTMLInputElement | HTMLSelectElement;
-        const name = element.name || element.id || '';
-        
-        if (name && name.startsWith('specifications.')) {
-          const specKey = name.replace('specifications.', '');
-          
+        const name = element.name || element.id || "";
+
+        if (name && name.startsWith("specifications.")) {
+          const specKey = name.replace("specifications.", "");
+
           // Пропускаем, если уже собрали через FormData
           if (specifications[specKey] !== undefined) continue;
-          
+
           let value: any = null;
-          
-          if (element.type === 'number') {
+
+          if (element.type === "number") {
             value = element.value ? Number(element.value) : null;
-          } else if (element.type === 'checkbox') {
+          } else if (element.type === "checkbox") {
             value = (element as HTMLInputElement).checked;
           } else {
             value = element.value || null;
           }
-          
-          if (value !== null && value !== undefined && value !== '') {
-            if (specKey === 'ram' || specKey === 'storage' || specKey === 'screen_size') {
-              specifications[specKey] = typeof value === 'string' ? Number(value) : value;
+
+          if (value !== null && value !== undefined && value !== "") {
+            if (
+              specKey === "ram" ||
+              specKey === "storage" ||
+              specKey === "screen_size"
+            ) {
+              specifications[specKey] =
+                typeof value === "string" ? Number(value) : value;
             } else {
               specifications[specKey] = value;
             }
@@ -527,16 +614,20 @@ export const EquipmentForm = ({ equipment, onSubmit, onCancel, loading }: Equipm
         }
       }
     } else {
-      console.warn('Форма не найдена в event.target');
+      console.warn("Форма не найдена в event.target");
     }
 
     // Также проверяем data на случай, если там есть specifications
     Object.keys(data).forEach((key) => {
-      if (key && key.startsWith('specifications.')) {
-        const specKey = key.replace('specifications.', '');
+      if (key && key.startsWith("specifications.")) {
+        const specKey = key.replace("specifications.", "");
         const value = data[key];
-        if (value !== undefined && value !== null && value !== '') {
-          if (specKey === 'ram' || specKey === 'storage' || specKey === 'screen_size') {
+        if (value !== undefined && value !== null && value !== "") {
+          if (
+            specKey === "ram" ||
+            specKey === "storage" ||
+            specKey === "screen_size"
+          ) {
             specifications[specKey] = Number(value);
           } else {
             specifications[specKey] = value;
@@ -549,33 +640,43 @@ export const EquipmentForm = ({ equipment, onSubmit, onCancel, loading }: Equipm
     // Формируем финальные данные
     const submitData = {
       ...data,
-      specifications: Object.keys(specifications).length > 0 ? specifications : null,
+      specifications:
+        Object.keys(specifications).length > 0 ? specifications : null,
     };
 
-    console.log('Отправка данных формы:', submitData);
-    console.log('Собранные specifications:', specifications);
+    console.log("Отправка данных формы:", submitData);
+    console.log("Собранные specifications:", specifications);
     onSubmit(submitData);
   };
 
   return (
-    <form onSubmit={handleSubmit((data, event) => onSubmitForm(data, event))} className="space-y-4">
+    <form
+      onSubmit={handleSubmit((data, event) => onSubmitForm(data, event))}
+      className="space-y-4"
+    >
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             Название <span className="text-red-500">*</span>
           </label>
           <input
-            {...register('name')}
+            {...register("name")}
             type="text"
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
           />
-          {errors.name && <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.name.message}</p>}
+          {errors.name && (
+            <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+              {errors.name.message}
+            </p>
+          )}
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Модель</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Модель
+          </label>
           <input
-            {...register('model')}
+            {...register("model")}
             type="text"
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
           />
@@ -586,19 +687,23 @@ export const EquipmentForm = ({ equipment, onSubmit, onCancel, loading }: Equipm
             Инвентарный номер <span className="text-red-500">*</span>
           </label>
           <input
-            {...register('inventory_number')}
+            {...register("inventory_number")}
             type="text"
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
           />
           {errors.inventory_number && (
-            <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.inventory_number.message}</p>
+            <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+              {errors.inventory_number.message}
+            </p>
           )}
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Серийный номер</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Серийный номер
+          </label>
           <input
-            {...register('serial_number')}
+            {...register("serial_number")}
             type="text"
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
           />
@@ -609,7 +714,7 @@ export const EquipmentForm = ({ equipment, onSubmit, onCancel, loading }: Equipm
             Категория <span className="text-red-500">*</span>
           </label>
           <select
-            {...register('category')}
+            {...register("category")}
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
           >
             <option value="computer">Компьютер</option>
@@ -628,7 +733,7 @@ export const EquipmentForm = ({ equipment, onSubmit, onCancel, loading }: Equipm
             Статус <span className="text-red-500">*</span>
           </label>
           <select
-            {...register('status')}
+            {...register("status")}
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
           >
             <option value="in_use">В работе</option>
@@ -639,18 +744,22 @@ export const EquipmentForm = ({ equipment, onSubmit, onCancel, loading }: Equipm
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Производитель</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Производитель
+          </label>
           <input
-            {...register('manufacturer')}
+            {...register("manufacturer")}
             type="text"
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Стоимость (₽)</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Стоимость (₽)
+          </label>
           <input
-            {...register('cost', { valueAsNumber: true })}
+            {...register("cost", { valueAsNumber: true })}
             type="number"
             step="0.01"
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
@@ -658,43 +767,58 @@ export const EquipmentForm = ({ equipment, onSubmit, onCancel, loading }: Equipm
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Дата покупки</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Дата покупки
+          </label>
           <input
-            {...register('purchase_date')}
+            {...register("purchase_date")}
             type="date"
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Гарантия до</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Гарантия до
+          </label>
           <input
-            {...register('warranty_until')}
+            {...register("warranty_until")}
             type="date"
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Пользователь</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Пользователь
+          </label>
           <select
-            {...register('current_owner_id')}
+            {...register("current_owner_id")}
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
             disabled={loadingUsers}
           >
             <option value="">Не выбрано</option>
             {users.map((user) => (
               <option key={user.id} value={user.id}>
-                {user.full_name}{user.department ? ` (${user.department})` : ''}
+                {user.full_name}
+                {user.department ? ` (${user.department})` : ""}
               </option>
             ))}
           </select>
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Здание</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Здание
+          </label>
           <select
-            {...register('location_department')}
+            {...register("location_department")}
+            onChange={(e) => {
+              const building = buildings.find((b) => b.name === e.target.value);
+              setSelectedBuildingId(building?.id || null);
+              setValue("location_department", e.target.value);
+              setValue("location_room", "");
+            }}
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
             disabled={loadingBuildings}
           >
@@ -708,18 +832,36 @@ export const EquipmentForm = ({ equipment, onSubmit, onCancel, loading }: Equipm
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Кабинет</label>
-          <input
-            {...register('location_room')}
-            type="text"
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-          />
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Кабинет
+          </label>
+          <select
+            {...register("location_room")}
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:opacity-50"
+            disabled={!selectedBuildingId || loadingRooms}
+          >
+            <option value="">
+              {loadingRooms
+                ? "Загрузка..."
+                : !selectedBuildingId
+                  ? "Сначала выберите здание"
+                  : "Не выбран"}
+            </option>
+            {rooms.map((room) => (
+              <option key={room.id} value={room.name}>
+                {room.name}
+                {room.floor ? ` (этаж ${room.floor})` : ""}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">IP-адрес</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            IP-адрес
+          </label>
           <input
-            {...register('ip_address')}
+            {...register("ip_address")}
             type="text"
             placeholder="Например: 192.168.1.100"
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
@@ -729,7 +871,7 @@ export const EquipmentForm = ({ equipment, onSubmit, onCancel, loading }: Equipm
 
       {/* Дополнительные поля в зависимости от категории */}
       <EquipmentCategoryFields
-        category={watch('category')}
+        category={watch("category")}
         specifications={equipment?.specifications}
         register={register}
         setValue={setValue}
@@ -748,14 +890,18 @@ export const EquipmentForm = ({ equipment, onSubmit, onCancel, loading }: Equipm
       )}
 
       <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200 dark:border-gray-700">
-        <Button type="button" variant="secondary" onClick={onCancel} disabled={loading}>
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={onCancel}
+          disabled={loading}
+        >
           Отмена
         </Button>
         <Button type="submit" loading={loading}>
-          {equipment ? 'Сохранить' : 'Создать'}
+          {equipment ? "Сохранить" : "Создать"}
         </Button>
       </div>
     </form>
   );
 };
-
