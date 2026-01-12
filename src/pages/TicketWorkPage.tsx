@@ -24,6 +24,7 @@ import type {
   User as UserType,
   Equipment,
   Building,
+  Room,
 } from "../types";
 import { Button } from "../components/ui/Button";
 import { TicketComments } from "../components/tickets/TicketComments";
@@ -121,8 +122,12 @@ export const TicketWorkPage = () => {
 
   // Справочники для выбора
   const [buildings, setBuildings] = useState<Building[]>([]);
+  const [rooms, setRooms] = useState<Room[]>([]);
   const [equipmentList, setEquipmentList] = useState<Equipment[]>([]);
   const [allUsers, setAllUsers] = useState<UserType[]>([]);
+  const [selectedBuildingId, setSelectedBuildingId] = useState<string | null>(
+    null,
+  );
 
   useEffect(() => {
     if (id) {
@@ -132,6 +137,15 @@ export const TicketWorkPage = () => {
       loadAllUsers();
     }
   }, [id]);
+
+  // Загрузка кабинетов при выборе здания
+  useEffect(() => {
+    if (selectedBuildingId) {
+      loadRooms(selectedBuildingId);
+    } else {
+      setRooms([]);
+    }
+  }, [selectedBuildingId]);
 
   // Загрузка оборудования при выборе здания/кабинета
   useEffect(() => {
@@ -163,6 +177,20 @@ export const TicketWorkPage = () => {
         setEditedLocationRoom(result.data.location_room || "");
         setEditedEquipmentId(result.data.equipment_id || null);
         setEditedCreatorId(result.data.creator_id || null);
+
+        // Найдем здание по имени для загрузки кабинетов
+        const locationDept = result.data.location_department;
+        if (locationDept) {
+          const buildingsResult = await buildingsService.getBuildings();
+          if (!buildingsResult.error && buildingsResult.data) {
+            const building = buildingsResult.data.find(
+              (b: Building) => b.name === locationDept,
+            );
+            if (building) {
+              setSelectedBuildingId(building.id);
+            }
+          }
+        }
       }
     } finally {
       setLoading(false);
@@ -191,6 +219,17 @@ export const TicketWorkPage = () => {
       }
     } catch (err) {
       console.error("Ошибка загрузки зданий:", err);
+    }
+  };
+
+  const loadRooms = async (buildingId: string) => {
+    try {
+      const result = await buildingsService.getRooms(buildingId);
+      if (!result.error && result.data) {
+        setRooms(result.data);
+      }
+    } catch (err) {
+      console.error("Ошибка загрузки кабинетов:", err);
     }
   };
 
@@ -427,7 +466,11 @@ export const TicketWorkPage = () => {
                   <select
                     value={editedLocationDepartment}
                     onChange={(e) => {
+                      const selectedBuilding = buildings.find(
+                        (b) => b.name === e.target.value,
+                      );
                       setEditedLocationDepartment(e.target.value);
+                      setSelectedBuildingId(selectedBuilding?.id || null);
                       setEditedLocationRoom("");
                       setEditedEquipmentId(null);
                       setHasChanges(true);
@@ -454,17 +497,26 @@ export const TicketWorkPage = () => {
                   Кабинет
                 </label>
                 {canManage ? (
-                  <input
-                    type="text"
+                  <select
                     value={editedLocationRoom}
                     onChange={(e) => {
                       setEditedLocationRoom(e.target.value);
                       setEditedEquipmentId(null);
                       setHasChanges(true);
                     }}
-                    placeholder="Номер кабинета"
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  />
+                    disabled={!selectedBuildingId}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:opacity-50"
+                  >
+                    <option value="">Не выбран</option>
+                    {rooms
+                      .filter((r) => r.is_active)
+                      .map((r) => (
+                        <option key={r.id} value={r.name}>
+                          {r.name}
+                          {r.floor ? ` (этаж ${r.floor})` : ""}
+                        </option>
+                      ))}
+                  </select>
                 ) : (
                   <p className="text-gray-900 dark:text-white">
                     {ticket.location_room || "-"}

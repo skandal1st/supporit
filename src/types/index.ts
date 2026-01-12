@@ -1,31 +1,41 @@
 // Роли пользователей
-export type UserRole = 'admin' | 'it_specialist' | 'employee';
+export type UserRole = "admin" | "it_specialist" | "employee";
 
 // Статусы оборудования
-export type EquipmentStatus = 'in_use' | 'in_stock' | 'in_repair' | 'written_off';
+export type EquipmentStatus =
+  | "in_use"
+  | "in_stock"
+  | "in_repair"
+  | "written_off";
 
 // Категории оборудования
-export type EquipmentCategory = 
-  | 'computer'
-  | 'monitor'
-  | 'printer'
-  | 'network'
-  | 'server'
-  | 'mobile'
-  | 'peripheral'
-  | 'other';
+export type EquipmentCategory =
+  | "computer"
+  | "monitor"
+  | "printer"
+  | "network"
+  | "server"
+  | "mobile"
+  | "peripheral"
+  | "other";
 
 // Приоритеты заявок
-export type TicketPriority = 'low' | 'medium' | 'high' | 'critical';
+export type TicketPriority = "low" | "medium" | "high" | "critical";
 
 // Статусы заявок
-export type TicketStatus = 'new' | 'in_progress' | 'waiting' | 'resolved' | 'closed' | 'pending_user';
+export type TicketStatus =
+  | "new"
+  | "in_progress"
+  | "waiting"
+  | "resolved"
+  | "closed"
+  | "pending_user";
 
 // Категории заявок
-export type TicketCategory = 'hardware' | 'software' | 'network' | 'other';
+export type TicketCategory = "hardware" | "software" | "network" | "other";
 
 // Источник создания заявки
-export type TicketSource = 'web' | 'email' | 'api';
+export type TicketSource = "web" | "email" | "api";
 
 // Пользователь
 export interface User {
@@ -160,6 +170,19 @@ export interface Building {
   updated_at: string;
 }
 
+// Кабинет
+export interface Room {
+  id: string;
+  building_id: string;
+  building_name?: string;
+  name: string;
+  floor?: number;
+  description?: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 // Расходные материалы
 export interface Consumable {
   id: string;
@@ -204,7 +227,7 @@ export interface Maintenance {
   next_due_date: string;
   assigned_to_id?: string;
   assigned_to?: User;
-  status: 'pending' | 'completed' | 'skipped';
+  status: "pending" | "completed" | "skipped";
   created_at: string;
   updated_at: string;
 }
@@ -230,7 +253,7 @@ export interface Notification {
   user_id: string;
   title: string;
   message: string;
-  type: 'info' | 'warning' | 'error' | 'success';
+  type: "info" | "warning" | "error" | "success";
   related_type?: string; // 'ticket', 'equipment', etc.
   related_id?: string;
   is_read: boolean;
@@ -306,7 +329,7 @@ export interface ZabbixTemplate {
 
 export interface ZabbixEquipmentStatus {
   found: boolean;
-  reason?: 'no_ip' | 'not_in_zabbix';
+  reason?: "no_ip" | "not_in_zabbix";
   message?: string;
   hostid?: string;
   hostname?: string;
@@ -335,7 +358,7 @@ export interface ZabbixEquipmentCounters {
 }
 
 // Системные настройки
-export type SettingType = 'smtp' | 'email' | 'system' | 'other';
+export type SettingType = "smtp" | "email" | "system" | "other";
 
 export interface SystemSetting {
   id: string;
@@ -348,12 +371,12 @@ export interface SystemSetting {
 
 // Справочники
 export type DictionaryType =
-  | 'ticket_category'
-  | 'ticket_priority'
-  | 'ticket_status'
-  | 'equipment_category'
-  | 'equipment_status'
-  | 'consumable_type';
+  | "ticket_category"
+  | "ticket_priority"
+  | "ticket_status"
+  | "equipment_category"
+  | "equipment_status"
+  | "consumable_type";
 
 export interface Dictionary {
   id: string;
@@ -368,6 +391,3 @@ export interface Dictionary {
   created_at: string;
   updated_at: string;
 }
-
-
-
