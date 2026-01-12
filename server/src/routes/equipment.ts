@@ -104,6 +104,26 @@ router.get("/", authenticate, async (req: AuthRequest, res: Response) => {
   }
 });
 
+// Получить оборудование текущего пользователя
+// ВАЖНО: Этот роут должен быть ПЕРЕД роутом /:id
+router.get("/my", authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.userId;
+
+    const result = await pool.query(
+      `SELECT * FROM equipment
+       WHERE current_owner_id = $1 AND status != 'written_off'
+       ORDER BY name`,
+      [userId],
+    );
+
+    res.json({ data: result.rows });
+  } catch (error) {
+    console.error("Ошибка получения оборудования пользователя:", error);
+    res.status(500).json({ error: "Ошибка при получении оборудования" });
+  }
+});
+
 // Получить оборудование по местоположению (кабинету)
 // ВАЖНО: Этот роут должен быть ПЕРЕД роутом /:id, иначе Express будет интерпретировать "by-location" как UUID
 router.get(
@@ -271,11 +291,9 @@ router.post(
 
       // Валидация обязательных полей
       if (!name || !inventory_number || !category) {
-        return res
-          .status(400)
-          .json({
-            error: "Название, инвентарный номер и категория обязательны",
-          });
+        return res.status(400).json({
+          error: "Название, инвентарный номер и категория обязательны",
+        });
       }
 
       // Преобразуем пустые строки в null для опциональных полей
@@ -380,11 +398,9 @@ router.post(
       });
 
       if (error.code === "23505") {
-        return res
-          .status(400)
-          .json({
-            error: "Оборудование с таким инвентарным номером уже существует",
-          });
+        return res.status(400).json({
+          error: "Оборудование с таким инвентарным номером уже существует",
+        });
       }
 
       if (error.code === "23503") {
@@ -591,11 +607,9 @@ router.put(
       });
 
       if (error.code === "23505") {
-        return res
-          .status(400)
-          .json({
-            error: "Оборудование с таким инвентарным номером уже существует",
-          });
+        return res.status(400).json({
+          error: "Оборудование с таким инвентарным номером уже существует",
+        });
       }
 
       if (error.code === "23503") {
