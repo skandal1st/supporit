@@ -109,7 +109,48 @@ export async function initTelegramBot(): Promise<Telegraf<BotContext> | null> {
     );
     bot.action("tickets_filter_my", requireLinkedAccount, handleMyTickets);
 
-    // Действия с заявками
+    // Действия с заявками (новый короткий формат t_*)
+    bot.action(/^t_view_(.+)$/, requireLinkedAccount, async (ctx) => {
+      const ticketId = ctx.match[1];
+      await showTicketDetails(ctx, ticketId);
+    });
+
+    bot.action(/^t_take_(.+)$/, requireLinkedAccount, async (ctx) => {
+      const ticketId = ctx.match[1];
+      await handleTakeTicket(ctx, ticketId);
+    });
+
+    bot.action(/^t_status_(.+)$/, requireLinkedAccount, async (ctx) => {
+      const ticketId = ctx.match[1];
+      await handleShowStatusMenu(ctx, ticketId);
+    });
+
+    // Маппинг кодов статусов к полным названиям
+    const statusCodeMap: Record<string, string> = {
+      n: "new",
+      p: "in_progress",
+      w: "waiting",
+      r: "resolved",
+      c: "closed",
+    };
+
+    bot.action(/^t_set_(.+)_([npwrc])$/, requireLinkedAccount, async (ctx) => {
+      const ticketId = ctx.match[1];
+      const statusCode = ctx.match[2];
+      const newStatus = statusCodeMap[statusCode] as any;
+      await handleSetStatus(ctx, ticketId, newStatus);
+    });
+
+    bot.action(/^t_comment_(.+)$/, requireLinkedAccount, async (ctx) => {
+      const ticketId = ctx.match[1];
+      const telegramId = ctx.from?.id;
+      if (telegramId) {
+        setUserState(telegramId, { action: "comment", ticketId });
+      }
+      await handleCommentPrompt(ctx, ticketId);
+    });
+
+    // Совместимость со старым форматом (ticket_*)
     bot.action(/^ticket_view_(.+)$/, requireLinkedAccount, async (ctx) => {
       const ticketId = ctx.match[1];
       await showTicketDetails(ctx, ticketId);
