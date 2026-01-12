@@ -1,61 +1,85 @@
-import { useState } from 'react';
-import { Settings as SettingsIcon, Server, Building2, Package, List, MessageCircle, RefreshCw } from 'lucide-react';
-import { Tabs } from '../components/ui/Tabs';
-import { SystemSettings } from '../components/settings/SystemSettings';
-import { BuildingsSettings } from '../components/settings/BuildingsSettings';
-import { DictionariesSettings } from '../components/settings/DictionariesSettings';
-import { TelegramSettings } from '../components/settings/TelegramSettings';
-import { SystemUpdateSettings } from '../components/settings/SystemUpdateSettings';
+import { useState } from "react";
+import {
+  Settings as SettingsIcon,
+  Server,
+  Building2,
+  Package,
+  List,
+  MessageCircle,
+  RefreshCw,
+} from "lucide-react";
+import { Tabs } from "../components/ui/Tabs";
+import { SystemSettings } from "../components/settings/SystemSettings";
+import { BuildingsSettings } from "../components/settings/BuildingsSettings";
+import { DictionariesSettings } from "../components/settings/DictionariesSettings";
+import { TelegramSettings } from "../components/settings/TelegramSettings";
+import { SystemUpdateSettings } from "../components/settings/SystemUpdateSettings";
+import { useAuthStore } from "../store/auth.store";
 
 export const SettingsPage = () => {
-  const [activeTab, setActiveTab] = useState('system');
+  const { user } = useAuthStore();
+  const isAdmin = user?.role === "admin";
 
-  const tabs = [
+  const [activeTab, setActiveTab] = useState(isAdmin ? "system" : "telegram");
+
+  // Полный набор вкладок для админа
+  const adminTabs = [
     {
-      id: 'system',
-      label: 'Системные настройки',
+      id: "system",
+      label: "Системные настройки",
       icon: <Server className="h-4 w-4" />,
     },
     {
-      id: 'updates',
-      label: 'Обновления',
+      id: "updates",
+      label: "Обновления",
       icon: <RefreshCw className="h-4 w-4" />,
     },
     {
-      id: 'telegram',
-      label: 'Telegram',
+      id: "telegram",
+      label: "Telegram",
       icon: <MessageCircle className="h-4 w-4" />,
     },
     {
-      id: 'buildings',
-      label: 'Здания',
+      id: "buildings",
+      label: "Здания",
       icon: <Building2 className="h-4 w-4" />,
     },
     {
-      id: 'equipment_categories',
-      label: 'Категории оборудования',
+      id: "equipment_categories",
+      label: "Категории оборудования",
       icon: <Package className="h-4 w-4" />,
     },
     {
-      id: 'equipment_statuses',
-      label: 'Статусы оборудования',
+      id: "equipment_statuses",
+      label: "Статусы оборудования",
       icon: <List className="h-4 w-4" />,
     },
   ];
 
+  // Только Telegram для IT-специалистов
+  const itSpecialistTabs = [
+    {
+      id: "telegram",
+      label: "Telegram",
+      icon: <MessageCircle className="h-4 w-4" />,
+    },
+  ];
+
+  const tabs = isAdmin ? adminTabs : itSpecialistTabs;
+
   const renderTabContent = () => {
     switch (activeTab) {
-      case 'system':
+      case "system":
         return <SystemSettings />;
-      case 'updates':
+      case "updates":
         return <SystemUpdateSettings />;
-      case 'telegram':
+      case "telegram":
         return <TelegramSettings />;
-      case 'buildings':
+      case "buildings":
         return <BuildingsSettings />;
-      case 'equipment_categories':
+      case "equipment_categories":
         return <DictionariesSettings type="equipment_category" />;
-      case 'equipment_statuses':
+      case "equipment_statuses":
         return <DictionariesSettings type="equipment_status" />;
       default:
         return <SystemSettings />;
