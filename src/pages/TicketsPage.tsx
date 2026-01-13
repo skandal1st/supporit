@@ -1,66 +1,93 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Plus, Search, CheckCircle, Clock, XCircle, Eye } from 'lucide-react';
-import { ticketsService, type TicketFilters } from '../services/tickets.service';
-import type { Ticket, TicketStatus, TicketPriority, TicketCategory } from '../types';
-import { Button } from '../components/ui/Button';
-import { Modal } from '../components/ui/Modal';
-import { TicketForm } from '../components/tickets/TicketForm';
-import { TicketDetailsModal } from '../components/tickets/TicketDetailsModal';
-import { Table, TableHeader, TableHeaderCell, TableBody, TableRow, TableCell } from '../components/ui/Table';
-import { useAuthStore } from '../store/auth.store';
-import { canManageTickets } from '../utils/permissions';
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import {
+  Plus,
+  Search,
+  CheckCircle,
+  Clock,
+  XCircle,
+  Eye,
+  EyeOff,
+} from "lucide-react";
+import {
+  ticketsService,
+  type TicketFilters,
+} from "../services/tickets.service";
+import type {
+  Ticket,
+  TicketStatus,
+  TicketPriority,
+  TicketCategory,
+} from "../types";
+import { Button } from "../components/ui/Button";
+import { Modal } from "../components/ui/Modal";
+import { TicketForm } from "../components/tickets/TicketForm";
+import { TicketDetailsModal } from "../components/tickets/TicketDetailsModal";
+import {
+  Table,
+  TableHeader,
+  TableHeaderCell,
+  TableBody,
+  TableRow,
+  TableCell,
+} from "../components/ui/Table";
+import { useAuthStore } from "../store/auth.store";
+import { canManageTickets } from "../utils/permissions";
 
 const getStatusLabel = (status: TicketStatus): string => {
   const labels: Record<TicketStatus, string> = {
-    new: 'Новая',
-    in_progress: 'В работе',
-    waiting: 'Ожидание',
-    resolved: 'Решена',
-    closed: 'Закрыта',
-    pending_user: 'Требует пользователя',
+    new: "Новая",
+    in_progress: "В работе",
+    waiting: "Ожидание",
+    resolved: "Решена",
+    closed: "Закрыта",
+    pending_user: "Требует пользователя",
   };
   return labels[status] || status;
 };
 
 const getStatusColor = (status: TicketStatus): string => {
   const colors: Record<TicketStatus, string> = {
-    new: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
-    in_progress: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
-    waiting: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
-    resolved: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-    closed: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200',
-    pending_user: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
+    new: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
+    in_progress:
+      "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
+    waiting:
+      "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200",
+    resolved:
+      "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+    closed: "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200",
+    pending_user:
+      "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
   };
-  return colors[status] || '';
+  return colors[status] || "";
 };
 
 const getPriorityLabel = (priority: TicketPriority): string => {
   const labels: Record<TicketPriority, string> = {
-    low: 'Низкий',
-    medium: 'Средний',
-    high: 'Высокий',
-    critical: 'Критический',
+    low: "Низкий",
+    medium: "Средний",
+    high: "Высокий",
+    critical: "Критический",
   };
   return labels[priority] || priority;
 };
 
 const getPriorityColor = (priority: TicketPriority): string => {
   const colors: Record<TicketPriority, string> = {
-    low: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200',
-    medium: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
-    high: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
-    critical: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
+    low: "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200",
+    medium: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
+    high: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200",
+    critical: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
   };
-  return colors[priority] || '';
+  return colors[priority] || "";
 };
 
 const getCategoryLabel = (category: TicketCategory): string => {
   const labels: Record<TicketCategory, string> = {
-    hardware: 'Оборудование',
-    software: 'ПО',
-    network: 'Сеть',
-    other: 'Прочее',
+    hardware: "Оборудование",
+    software: "ПО",
+    network: "Сеть",
+    other: "Прочее",
   };
   return labels[category] || category;
 };
@@ -75,8 +102,9 @@ export const TicketsPage = () => {
   const [pageSize] = useState(20);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [viewingTicketId, setViewingTicketId] = useState<string | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
   const [filters, setFilters] = useState<TicketFilters>({});
+  const [hideClosed, setHideClosed] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const canManage = canManageTickets(user?.role);
@@ -89,20 +117,21 @@ export const TicketsPage = () => {
         {
           ...filters,
           search: searchTerm || undefined,
+          excludeStatuses: hideClosed ? ["closed"] : undefined,
         },
         page,
-        pageSize
+        pageSize,
       );
       if (result.error) {
-        console.error('Ошибка загрузки заявок:', result.error);
-        setError(result.error.message || 'Ошибка при загрузке заявок');
+        console.error("Ошибка загрузки заявок:", result.error);
+        setError(result.error.message || "Ошибка при загрузке заявок");
       } else {
         setTickets(result.data);
         setTotalCount(result.count);
       }
     } catch (err) {
-      console.error('Исключение при загрузке:', err);
-      setError('Произошла ошибка при загрузке заявок');
+      console.error("Исключение при загрузке:", err);
+      setError("Произошла ошибка при загрузке заявок");
     } finally {
       setLoading(false);
     }
@@ -111,7 +140,14 @@ export const TicketsPage = () => {
   useEffect(() => {
     loadTickets();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, filters.status, filters.priority, filters.category, searchTerm]);
+  }, [
+    page,
+    filters.status,
+    filters.priority,
+    filters.category,
+    searchTerm,
+    hideClosed,
+  ]);
 
   const handleCreate = () => {
     setIsModalOpen(true);
@@ -124,23 +160,26 @@ export const TicketsPage = () => {
   const handleSubmit = async (data: any) => {
     const { error } = await ticketsService.createTicket(data);
     if (error) {
-      alert('Ошибка при создании: ' + error.message);
+      alert("Ошибка при создании: " + error.message);
       return;
     }
     setIsModalOpen(false);
     loadTickets();
   };
 
-  const handleStatusChange = async (ticketId: string, newStatus: TicketStatus) => {
+  const handleStatusChange = async (
+    ticketId: string,
+    newStatus: TicketStatus,
+  ) => {
     const updateData: any = { status: newStatus };
-    
+
     // Автоматически устанавливаем resolved_at или closed_at в зависимости от статуса
-    if (newStatus === 'resolved') {
+    if (newStatus === "resolved") {
       updateData.resolved_at = new Date().toISOString();
-    } else if (newStatus === 'closed') {
+    } else if (newStatus === "closed") {
       updateData.closed_at = new Date().toISOString();
       // Если resolved_at не установлен, устанавливаем его тоже
-      const ticket = tickets.find(t => t.id === ticketId);
+      const ticket = tickets.find((t) => t.id === ticketId);
       if (ticket && !ticket.resolved_at) {
         updateData.resolved_at = new Date().toISOString();
       }
@@ -152,36 +191,39 @@ export const TicketsPage = () => {
 
     const { error } = await ticketsService.updateTicket(ticketId, updateData);
     if (error) {
-      alert('Ошибка при изменении статуса: ' + error.message);
+      alert("Ошибка при изменении статуса: " + error.message);
     } else {
       loadTickets();
     }
   };
 
-  const handleQuickAction = async (ticket: Ticket, action: 'close' | 'waiting' | 'in_progress') => {
+  const handleQuickAction = async (
+    ticket: Ticket,
+    action: "close" | "waiting" | "in_progress",
+  ) => {
     let newStatus: TicketStatus;
-    if (action === 'close') {
-      newStatus = 'closed';
-    } else if (action === 'waiting') {
-      newStatus = 'waiting';
+    if (action === "close") {
+      newStatus = "closed";
+    } else if (action === "waiting") {
+      newStatus = "waiting";
     } else {
-      newStatus = 'in_progress';
+      newStatus = "in_progress";
     }
     await handleStatusChange(ticket.id, newStatus);
   };
 
-  const handleStatusFilter = (status: TicketStatus | 'all') => {
-    setFilters(prev => ({
+  const handleStatusFilter = (status: TicketStatus | "all") => {
+    setFilters((prev) => ({
       ...prev,
-      status: status === 'all' ? undefined : status,
+      status: status === "all" ? undefined : status,
     }));
     setPage(1);
   };
 
-  const handlePriorityFilter = (priority: TicketPriority | 'all') => {
-    setFilters(prev => ({
+  const handlePriorityFilter = (priority: TicketPriority | "all") => {
+    setFilters((prev) => ({
       ...prev,
-      priority: priority === 'all' ? undefined : priority,
+      priority: priority === "all" ? undefined : priority,
     }));
     setPage(1);
   };
@@ -191,7 +233,9 @@ export const TicketsPage = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Заявки</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+            Заявки
+          </h1>
           <p className="text-gray-600 dark:text-gray-400 mt-1">
             Всего: {totalCount} заявок
           </p>
@@ -222,8 +266,10 @@ export const TicketsPage = () => {
           </div>
           <div className="flex gap-2">
             <select
-              value={filters.status || 'all'}
-              onChange={(e) => handleStatusFilter(e.target.value as TicketStatus | 'all')}
+              value={filters.status || "all"}
+              onChange={(e) =>
+                handleStatusFilter(e.target.value as TicketStatus | "all")
+              }
               className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
             >
               <option value="all">Все статусы</option>
@@ -232,11 +278,15 @@ export const TicketsPage = () => {
               <option value="waiting">Ожидание</option>
               <option value="resolved">Решена</option>
               <option value="closed">Закрыта</option>
-              {canManage && <option value="pending_user">Требует пользователя</option>}
+              {canManage && (
+                <option value="pending_user">Требует пользователя</option>
+              )}
             </select>
             <select
-              value={filters.priority || 'all'}
-              onChange={(e) => handlePriorityFilter(e.target.value as TicketPriority | 'all')}
+              value={filters.priority || "all"}
+              onChange={(e) =>
+                handlePriorityFilter(e.target.value as TicketPriority | "all")
+              }
               className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
             >
               <option value="all">Все приоритеты</option>
@@ -245,6 +295,24 @@ export const TicketsPage = () => {
               <option value="high">Высокий</option>
               <option value="critical">Критический</option>
             </select>
+            <button
+              onClick={() => setHideClosed(!hideClosed)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${
+                hideClosed
+                  ? "bg-primary-100 border-primary-300 text-primary-700 dark:bg-primary-900 dark:border-primary-700 dark:text-primary-300"
+                  : "border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
+              }`}
+              title={
+                hideClosed
+                  ? "Показать закрытые заявки"
+                  : "Скрыть закрытые заявки"
+              }
+            >
+              <EyeOff className="h-4 w-4" />
+              <span className="text-sm whitespace-nowrap">
+                {hideClosed ? "Закрытые скрыты" : "Скрыть закрытые"}
+              </span>
+            </button>
           </div>
         </div>
       </div>
@@ -301,7 +369,9 @@ export const TicketsPage = () => {
                   </TableCell>
                   <TableCell>{getCategoryLabel(ticket.category)}</TableCell>
                   <TableCell>
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getPriorityColor(ticket.priority)}`}>
+                    <span
+                      className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getPriorityColor(ticket.priority)}`}
+                    >
                       {getPriorityLabel(ticket.priority)}
                     </span>
                   </TableCell>
@@ -309,20 +379,31 @@ export const TicketsPage = () => {
                     {canManage ? (
                       <select
                         value={ticket.status}
-                        onChange={(e) => handleStatusChange(ticket.id, e.target.value as TicketStatus)}
+                        onChange={(e) =>
+                          handleStatusChange(
+                            ticket.id,
+                            e.target.value as TicketStatus,
+                          )
+                        }
                         className={`text-xs font-semibold rounded-full px-2 py-1 border-0 focus:ring-2 focus:ring-primary-500 ${getStatusColor(ticket.status)} cursor-pointer`}
                         onClick={(e) => e.stopPropagation()}
-                        disabled={ticket.status === 'pending_user'}
+                        disabled={ticket.status === "pending_user"}
                       >
                         <option value="new">Новая</option>
                         <option value="in_progress">В работе</option>
                         <option value="waiting">Ожидание</option>
                         <option value="resolved">Решена</option>
                         <option value="closed">Закрыта</option>
-                        {ticket.status === 'pending_user' && <option value="pending_user">Требует пользователя</option>}
+                        {ticket.status === "pending_user" && (
+                          <option value="pending_user">
+                            Требует пользователя
+                          </option>
+                        )}
                       </select>
                     ) : (
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(ticket.status)}`}>
+                      <span
+                        className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(ticket.status)}`}
+                      >
                         {getStatusLabel(ticket.status)}
                       </span>
                     )}
@@ -330,11 +411,15 @@ export const TicketsPage = () => {
                   <TableCell>
                     {ticket.creator ? (
                       <div>
-                        <div className="font-medium">{ticket.creator.full_name}</div>
+                        <div className="font-medium">
+                          {ticket.creator.full_name}
+                        </div>
                         {ticket.creator.department && (
-                          <div className="text-sm text-gray-500 dark:text-gray-400">{ticket.creator.department}</div>
+                          <div className="text-sm text-gray-500 dark:text-gray-400">
+                            {ticket.creator.department}
+                          </div>
                         )}
-                        {ticket.created_via === 'email' && (
+                        {ticket.created_via === "email" && (
                           <span className="inline-flex items-center px-2 py-0.5 mt-1 text-xs font-medium rounded-full bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200">
                             ✉ Email
                           </span>
@@ -342,7 +427,9 @@ export const TicketsPage = () => {
                       </div>
                     ) : ticket.email_sender ? (
                       <div>
-                        <div className="text-sm text-gray-600 dark:text-gray-400">{ticket.email_sender}</div>
+                        <div className="text-sm text-gray-600 dark:text-gray-400">
+                          {ticket.email_sender}
+                        </div>
                         <span className="inline-flex items-center px-2 py-0.5 mt-1 text-xs font-medium rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">
                           ⚠ Нет пользователя
                         </span>
@@ -354,8 +441,12 @@ export const TicketsPage = () => {
                   <TableCell>
                     {ticket.equipment ? (
                       <div>
-                        <div className="font-medium">{ticket.equipment.name}</div>
-                        <div className="text-sm text-gray-500 dark:text-gray-400">{ticket.equipment.inventory_number}</div>
+                        <div className="font-medium">
+                          {ticket.equipment.name}
+                        </div>
+                        <div className="text-sm text-gray-500 dark:text-gray-400">
+                          {ticket.equipment.inventory_number}
+                        </div>
                       </div>
                     ) : (
                       <span className="text-gray-400">-</span>
@@ -365,16 +456,20 @@ export const TicketsPage = () => {
                     {ticket.location_room ? (
                       <div>
                         {ticket.location_department && (
-                          <div className="text-sm text-gray-500 dark:text-gray-400">{ticket.location_department}</div>
+                          <div className="text-sm text-gray-500 dark:text-gray-400">
+                            {ticket.location_department}
+                          </div>
                         )}
-                        <div className="font-medium">{ticket.location_room}</div>
+                        <div className="font-medium">
+                          {ticket.location_room}
+                        </div>
                       </div>
                     ) : (
                       <span className="text-gray-400">-</span>
                     )}
                   </TableCell>
                   <TableCell>
-                    {new Date(ticket.created_at).toLocaleDateString('ru-RU')}
+                    {new Date(ticket.created_at).toLocaleDateString("ru-RU")}
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center space-x-2">
@@ -394,37 +489,38 @@ export const TicketsPage = () => {
                       {/* Быстрые действия для ИТ-специалистов */}
                       {canManage && (
                         <>
-                          {ticket.status !== 'closed' && ticket.status !== 'resolved' && (
-                            <>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleQuickAction(ticket, 'waiting');
-                                }}
-                                className="p-1 text-orange-600 hover:text-orange-700 dark:text-orange-400 dark:hover:text-orange-300"
-                                title="Отложить"
-                              >
-                                <Clock className="h-4 w-4" />
-                              </button>
-                              {ticket.status !== 'in_progress' && (
+                          {ticket.status !== "closed" &&
+                            ticket.status !== "resolved" && (
+                              <>
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    handleQuickAction(ticket, 'in_progress');
+                                    handleQuickAction(ticket, "waiting");
                                   }}
-                                  className="p-1 text-yellow-600 hover:text-yellow-700 dark:text-yellow-400 dark:hover:text-yellow-300"
-                                  title="Взять в работу"
+                                  className="p-1 text-orange-600 hover:text-orange-700 dark:text-orange-400 dark:hover:text-orange-300"
+                                  title="Отложить"
                                 >
-                                  <CheckCircle className="h-4 w-4" />
+                                  <Clock className="h-4 w-4" />
                                 </button>
-                              )}
-                            </>
-                          )}
-                          {ticket.status !== 'closed' && (
+                                {ticket.status !== "in_progress" && (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleQuickAction(ticket, "in_progress");
+                                    }}
+                                    className="p-1 text-yellow-600 hover:text-yellow-700 dark:text-yellow-400 dark:hover:text-yellow-300"
+                                    title="Взять в работу"
+                                  >
+                                    <CheckCircle className="h-4 w-4" />
+                                  </button>
+                                )}
+                              </>
+                            )}
+                          {ticket.status !== "closed" && (
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleQuickAction(ticket, 'close');
+                                handleQuickAction(ticket, "close");
                               }}
                               className="p-1 text-gray-600 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
                               title="Закрыть"
@@ -446,7 +542,8 @@ export const TicketsPage = () => {
         {!loading && totalCount > pageSize && (
           <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
             <div className="text-sm text-gray-700 dark:text-gray-300">
-              Показано {(page - 1) * pageSize + 1} - {Math.min(page * pageSize, totalCount)} из {totalCount}
+              Показано {(page - 1) * pageSize + 1} -{" "}
+              {Math.min(page * pageSize, totalCount)} из {totalCount}
             </div>
             <div className="flex gap-2">
               <Button
@@ -496,4 +593,3 @@ export const TicketsPage = () => {
     </div>
   );
 };
-
