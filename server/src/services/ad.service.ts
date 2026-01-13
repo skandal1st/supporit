@@ -1,4 +1,13 @@
-import { Client } from "ldapts";
+// Ленивая загрузка ldapts - модуль загружается только при использовании AD
+let Client: any = null;
+
+async function getLdapClient() {
+  if (!Client) {
+    const ldapts = await import("ldapts");
+    Client = ldapts.Client;
+  }
+  return Client;
+}
 
 // Интерфейс пользователя AD
 export interface ADUser {
@@ -73,8 +82,9 @@ export function isADEnabled(): boolean {
 }
 
 // Создание LDAP клиента
-async function createClient(): Promise<Client> {
+async function createClient(): Promise<any> {
   const config = getConfig();
+  const ClientClass = await getLdapClient();
 
   // tlsOptions только для ldaps://
   const clientOptions: {
@@ -88,7 +98,7 @@ async function createClient(): Promise<Client> {
     clientOptions.tlsOptions = config.tlsOptions;
   }
 
-  const client = new Client(clientOptions);
+  const client = new ClientClass(clientOptions);
 
   await client.bind(config.bindDN, config.bindPassword);
 
@@ -345,10 +355,17 @@ export async function authenticateADUser(
     }
 
     // Пробуем аутентифицироваться от имени пользователя
-    const client = new Client({
+    const ClientClass = await getLdapClient();
+    const clientOptions: {
+      url: string;
+      tlsOptions?: { rejectUnauthorized: boolean };
+    } = {
       url: config.url,
-      tlsOptions: config.tlsOptions,
-    });
+    };
+    if (config.url.startsWith("ldaps://")) {
+      clientOptions.tlsOptions = config.tlsOptions;
+    }
+    const client = new ClientClass(clientOptions);
 
     try {
       await client.bind(user.dn, password);
