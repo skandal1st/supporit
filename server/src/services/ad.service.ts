@@ -50,7 +50,7 @@ function getConfig(): ADConfig {
 
   if (!url || !baseDN || !bindDN || !bindPassword) {
     throw new Error(
-      "AD configuration incomplete. Required: AD_URL, AD_BASE_DN, AD_BIND_DN, AD_BIND_PASSWORD"
+      "AD configuration incomplete. Required: AD_URL, AD_BASE_DN, AD_BIND_DN, AD_BIND_PASSWORD",
     );
   }
 
@@ -76,10 +76,19 @@ export function isADEnabled(): boolean {
 async function createClient(): Promise<Client> {
   const config = getConfig();
 
-  const client = new Client({
+  // tlsOptions только для ldaps://
+  const clientOptions: {
+    url: string;
+    tlsOptions?: { rejectUnauthorized: boolean };
+  } = {
     url: config.url,
-    tlsOptions: config.tlsOptions,
-  });
+  };
+
+  if (config.url.startsWith("ldaps://")) {
+    clientOptions.tlsOptions = config.tlsOptions;
+  }
+
+  const client = new Client(clientOptions);
 
   await client.bind(config.bindDN, config.bindPassword);
 
@@ -87,9 +96,14 @@ async function createClient(): Promise<Client> {
 }
 
 // Парсинг userAccountControl для определения статуса аккаунта
-function isAccountEnabled(userAccountControl: number | string | undefined): boolean {
+function isAccountEnabled(
+  userAccountControl: number | string | undefined,
+): boolean {
   if (!userAccountControl) return true;
-  const uac = typeof userAccountControl === "string" ? parseInt(userAccountControl, 10) : userAccountControl;
+  const uac =
+    typeof userAccountControl === "string"
+      ? parseInt(userAccountControl, 10)
+      : userAccountControl;
   // Бит 2 (0x2) = ACCOUNTDISABLE
   return (uac & 2) === 0;
 }
@@ -213,7 +227,9 @@ export async function getADUsers(filter?: string): Promise<ADUser[]> {
 }
 
 // Получение пользователя по sAMAccountName
-export async function getADUserByUsername(username: string): Promise<ADUser | null> {
+export async function getADUserByUsername(
+  username: string,
+): Promise<ADUser | null> {
   const config = getConfig();
   const client = await createClient();
 
@@ -281,7 +297,10 @@ export async function getADGroups(filter?: string): Promise<ADGroup[]> {
 }
 
 // Проверка подключения к AD
-export async function testADConnection(): Promise<{ success: boolean; message: string }> {
+export async function testADConnection(): Promise<{
+  success: boolean;
+  message: string;
+}> {
   try {
     const config = getConfig();
     const client = await createClient();
@@ -310,7 +329,7 @@ export async function testADConnection(): Promise<{ success: boolean; message: s
 // Аутентификация пользователя через AD
 export async function authenticateADUser(
   username: string,
-  password: string
+  password: string,
 ): Promise<{ success: boolean; user?: ADUser; message?: string }> {
   try {
     const config = getConfig();
@@ -339,6 +358,9 @@ export async function authenticateADUser(
       return { success: false, message: "Неверный пароль" };
     }
   } catch (error: any) {
-    return { success: false, message: `Ошибка аутентификации: ${error.message}` };
+    return {
+      success: false,
+      message: `Ошибка аутентификации: ${error.message}`,
+    };
   }
 }
