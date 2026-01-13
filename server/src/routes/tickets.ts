@@ -19,6 +19,7 @@ router.get("/", authenticate, async (req: AuthRequest, res: Response) => {
       category,
       location_department,
       location_room,
+      excludeStatuses,
       page = "1",
       pageSize = "20",
     } = req.query;
@@ -31,6 +32,16 @@ router.get("/", authenticate, async (req: AuthRequest, res: Response) => {
       paramCount++;
       query += ` AND status = $${paramCount}`;
       params.push(status);
+    }
+
+    // Исключение статусов (например, excludeStatuses=closed,resolved)
+    if (excludeStatuses && typeof excludeStatuses === "string") {
+      const statusesToExclude = excludeStatuses.split(",").map((s) => s.trim());
+      if (statusesToExclude.length > 0) {
+        paramCount++;
+        query += ` AND status != ALL($${paramCount}::text[])`;
+        params.push(statusesToExclude);
+      }
     }
 
     if (priority) {
