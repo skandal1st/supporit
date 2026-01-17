@@ -124,6 +124,8 @@ export interface Ticket {
   selected_consumables?: string[]; // IDs выбранных расходников
   attachments?: string[]; // URLs файлов
   email_sender?: string; // Email отправителя для тикетов, созданных через email
+  email_message_id?: string; // Message-ID оригинального письма для email threading
+  email_subject?: string; // Оригинальная тема письма для Re: ответов
   created_via?: TicketSource; // Источник создания: web, email, api
   desired_resolution_date?: string;
   resolved_at?: string;
@@ -138,12 +140,15 @@ export interface Ticket {
 export interface TicketComment {
   id: string;
   ticket_id: string;
-  user_id: string;
+  user_id?: string; // Optional для комментариев из email без зарегистрированного пользователя
   user?: User;
   user_name?: string;
   user_role?: UserRole;
   content: string;
   attachments?: string[];
+  is_from_email?: boolean; // Комментарий создан из входящего email
+  email_message_id?: string; // Message-ID письма для email threading
+  email_sender?: string; // Email отправителя для комментариев без зарегистрированного пользователя
   created_at: string;
 }
 

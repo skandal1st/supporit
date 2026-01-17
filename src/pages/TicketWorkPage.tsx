@@ -11,6 +11,10 @@ import {
   MapPin,
   Monitor,
   UserPlus,
+  Paperclip,
+  FileText,
+  Image,
+  Download,
 } from "lucide-react";
 import { ticketsService } from "../services/tickets.service";
 import { usersService } from "../services/users.service";
@@ -597,9 +601,89 @@ export const TicketWorkPage = () => {
             </div>
           )}
 
+          {/* Вложения из email-тикета */}
+          {ticket.attachments && ticket.attachments.length > 0 && (
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+                <Paperclip className="h-5 w-5 mr-2" />
+                Вложения ({ticket.attachments.length})
+              </h3>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {ticket.attachments.map((path, idx) => {
+                  const filename = path.split("/").pop() || "Файл";
+                  const isImage = /\.(jpg|jpeg|png|gif|webp|svg|bmp)$/i.test(
+                    path,
+                  );
+                  const apiUrl =
+                    import.meta.env.VITE_API_URL?.replace("/api", "") || "";
+                  const fullUrl = `${apiUrl}${path}`;
+
+                  return (
+                    <div
+                      key={idx}
+                      className="relative group border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden"
+                    >
+                      {isImage ? (
+                        <a
+                          href={fullUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          <img
+                            src={fullUrl}
+                            alt={filename}
+                            className="w-full h-32 object-cover group-hover:opacity-90 transition-opacity"
+                            onError={(e) => {
+                              // Если изображение не загрузилось, показываем заглушку
+                              (e.target as HTMLImageElement).style.display =
+                                "none";
+                              (
+                                e.target as HTMLImageElement
+                              ).nextElementSibling?.classList.remove("hidden");
+                            }}
+                          />
+                          <div className="hidden w-full h-32 flex items-center justify-center bg-gray-100 dark:bg-gray-700">
+                            <Image className="h-8 w-8 text-gray-400" />
+                          </div>
+                        </a>
+                      ) : (
+                        <div className="w-full h-32 flex items-center justify-center bg-gray-50 dark:bg-gray-700">
+                          <FileText className="h-12 w-12 text-gray-400" />
+                        </div>
+                      )}
+                      <div className="p-2 bg-gray-50 dark:bg-gray-700">
+                        <p
+                          className="text-xs text-gray-600 dark:text-gray-300 truncate"
+                          title={filename}
+                        >
+                          {filename}
+                        </p>
+                        <a
+                          href={fullUrl}
+                          download={filename}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center mt-1 text-xs text-primary-600 dark:text-primary-400 hover:underline"
+                        >
+                          <Download className="h-3 w-3 mr-1" />
+                          Скачать
+                        </a>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Комментарии */}
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-            <TicketComments ticketId={ticket.id} />
+            <TicketComments
+              ticketId={ticket.id}
+              emailSender={ticket.email_sender}
+              createdVia={ticket.created_via}
+              creatorEmail={ticket.creator?.email}
+            />
           </div>
         </div>
 

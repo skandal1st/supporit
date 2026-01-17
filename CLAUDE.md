@@ -47,6 +47,8 @@ psql -U postgres -d supporit -f supabase/schema_postgres.sql
 - **React 19** with TypeScript, **Vite** bundler
 - **Zustand** for state management - see `src/store/auth.store.ts`
 - **React Router v7** - routes defined in `src/App.tsx`
+- **React Hook Form + Zod** for form validation
+- **TanStack Table** for data tables with sorting/filtering
 - API client in `src/lib/api.ts` wraps fetch with JWT auth from localStorage
 - Services in `src/services/` call API endpoints and return `{ data, error }` tuples
 
@@ -71,6 +73,47 @@ Three roles with different permissions:
 - `employee` - Create tickets, view own equipment
 
 Route protection uses `ProtectedRoute` component with `requiredRoles` prop.
+Backend uses `requireRole(...roles)` middleware for API protection.
+
+## Integrations
+
+### Active Directory (LDAP)
+- Service: `server/src/services/ad.service.ts`
+- Routes: `server/src/routes/ad.ts`
+- Lazy-loaded user list, AD connection testing, user sync
+
+### Email (SMTP/IMAP)
+- Sender: `server/src/services/email-sender.service.ts`
+- Receiver: `server/src/services/email-receiver.service.ts`
+- Cron jobs: `server/src/services/email-cron.service.ts`
+- Auto-creates tickets from incoming emails
+
+### Telegram Bot
+- Bot setup: `server/src/telegram/bot.js`
+- Routes: `server/src/routes/telegram.ts`
+- Inline ticket management with callback buttons
+
+### Zabbix Monitoring
+- Service: `server/src/services/zabbix.service.ts`
+- Host/device monitoring, supply level tracking
+
+### HR_desk Integration
+- Routes: `server/src/routes/integrations.ts`
+- Two-way sync with HR systems via Bearer token auth
+
+## Key File Locations
+
+| Purpose | Location |
+|---------|----------|
+| All TypeScript types | `src/types/index.ts` |
+| API client wrapper | `src/lib/api.ts` |
+| Auth state (Zustand) | `src/store/auth.store.ts` |
+| Route definitions | `src/App.tsx` |
+| DB connection pool | `server/src/config/database.ts` |
+| Auth middleware | `server/src/middleware/auth.ts` |
+| Server entry point | `server/src/index.ts` |
+| Database schema | `supabase/schema_postgres.sql` |
+| Env template | `server/env.example` |
 
 ## Environment Variables
 
