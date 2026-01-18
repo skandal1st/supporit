@@ -1,5 +1,5 @@
-import { post, get, setAuthToken, removeAuthToken } from '../lib/api';
-import type { User } from '../types';
+import { post, get, setAuthToken, removeAuthToken } from "../lib/api";
+import type { User } from "../types";
 
 export interface AuthResponse {
   user: User | null;
@@ -8,15 +8,22 @@ export interface AuthResponse {
 
 export const authService = {
   // Регистрация
-  async signUp(email: string, password: string, fullName: string): Promise<AuthResponse> {
-    const { data, error } = await post<{ user: User; token: string }>('/auth/signup', {
-      email,
-      password,
-      fullName,
-    });
+  async signUp(
+    email: string,
+    password: string,
+    fullName: string,
+  ): Promise<AuthResponse> {
+    const { data, error } = await post<{ user: User; token: string }>(
+      "/auth/signup",
+      {
+        email,
+        password,
+        fullName,
+      },
+    );
 
     if (error || !data) {
-      return { user: null, error: error || new Error('Ошибка регистрации') };
+      return { user: null, error: error || new Error("Ошибка регистрации") };
     }
 
     // Сохраняем токен
@@ -26,16 +33,20 @@ export const authService = {
   },
 
   // Вход
-  async signIn(email: string, password: string): Promise<AuthResponse & { requiresPassword?: boolean }> {
+  async signIn(
+    email: string,
+    password: string,
+  ): Promise<AuthResponse & { requiresPassword?: boolean }> {
     try {
-      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
-      const token = localStorage.getItem('auth_token');
-      
+      const API_URL =
+        import.meta.env.VITE_API_URL || "http://localhost:3001/api";
+      const token = localStorage.getItem("auth_token");
+
       const response = await fetch(`${API_URL}/auth/signin`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({ email, password }),
       });
@@ -45,13 +56,16 @@ export const authService = {
       if (!response.ok) {
         // Проверяем, требуется ли установка пароля
         if (responseData.requiresPassword) {
-          return { 
-            user: null, 
-            error: new Error(responseData.error || 'Пароль не установлен'), 
-            requiresPassword: true 
+          return {
+            user: null,
+            error: new Error(responseData.error || "Пароль не установлен"),
+            requiresPassword: true,
           };
         }
-        return { user: null, error: new Error(responseData.error || 'Ошибка входа') };
+        return {
+          user: null,
+          error: new Error(responseData.error || "Ошибка входа"),
+        };
       }
 
       // Сохраняем токен
@@ -59,19 +73,23 @@ export const authService = {
 
       return { user: responseData.user, error: null };
     } catch (error) {
-      return { user: null, error: error instanceof Error ? error : new Error('Ошибка входа') };
+      return {
+        user: null,
+        error: error instanceof Error ? error : new Error("Ошибка входа"),
+      };
     }
   },
 
   // Установить пароль при первом входе
   async setPassword(email: string, password: string): Promise<AuthResponse> {
     try {
-      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
-      
+      const API_URL =
+        import.meta.env.VITE_API_URL || "http://localhost:3001/api";
+
       const response = await fetch(`${API_URL}/auth/set-password`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({ email, password }),
       });
@@ -79,7 +97,10 @@ export const authService = {
       const responseData = await response.json();
 
       if (!response.ok) {
-        return { user: null, error: new Error(responseData.error || 'Ошибка установки пароля') };
+        return {
+          user: null,
+          error: new Error(responseData.error || "Ошибка установки пароля"),
+        };
       }
 
       // Сохраняем токен
@@ -87,20 +108,24 @@ export const authService = {
 
       return { user: responseData.user, error: null };
     } catch (error) {
-      return { user: null, error: error instanceof Error ? error : new Error('Ошибка установки пароля') };
+      return {
+        user: null,
+        error:
+          error instanceof Error ? error : new Error("Ошибка установки пароля"),
+      };
     }
   },
 
   // Выход
   async signOut() {
-    await post('/auth/signout');
+    await post("/auth/signout");
     removeAuthToken();
     return { error: null };
   },
 
   // Получить текущего пользователя
   async getCurrentUser(): Promise<User | null> {
-    const { data, error } = await get<{ user: User }>('/auth/me');
+    const { data, error } = await get<{ user: User }>("/auth/me");
 
     if (error || !data) {
       return null;
@@ -122,35 +147,56 @@ export const authService = {
 
     // Слушаем изменения в localStorage (для синхронизации между вкладками)
     const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'auth_token') {
+      if (e.key === "auth_token") {
         this.getCurrentUser().then(callback);
       }
     };
 
-    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener("storage", handleStorageChange);
 
     // Возвращаем функцию для отписки
     return {
       data: {
         subscription: {
           unsubscribe: () => {
-            window.removeEventListener('storage', handleStorageChange);
+            window.removeEventListener("storage", handleStorageChange);
           },
         },
       },
     };
   },
 
-  // Сброс пароля (заглушка)
-  async resetPassword(_email: string) {
-    // TODO: Реализовать на бэкенде
-    return { error: new Error('Функция в разработке') };
+  // Смена пароля (для текущего пользователя)
+  async updatePassword(currentPassword: string, newPassword: string) {
+    const { data, error } = await post<{ message: string }>(
+      "/auth/update-password",
+      {
+        currentPassword,
+        newPassword,
+      },
+    );
+
+    if (error) {
+      return { error };
+    }
+
+    return { data, error: null };
   },
 
-  // Обновить пароль (заглушка)
-  async updatePassword(_newPassword: string) {
-    // TODO: Реализовать на бэкенде
-    return { error: new Error('Функция в разработке') };
+  // Сброс пароля администратором (для любого пользователя)
+  async resetPassword(userId: string, newPassword: string) {
+    const { data, error } = await post<{ message: string }>(
+      "/auth/reset-password",
+      {
+        userId,
+        newPassword,
+      },
+    );
+
+    if (error) {
+      return { error };
+    }
+
+    return { data, error: null };
   },
 };
-
