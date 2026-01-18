@@ -12,6 +12,7 @@ import {
   Building2,
   Settings,
   Key,
+  ShoppingCart,
 } from "lucide-react";
 import { useAuthStore } from "../../store/auth.store";
 import { useNavigate } from "react-router-dom";
@@ -41,6 +42,11 @@ const navItems: NavItem[] = [
     checkPermission: (role) => role !== "employee", // Сотрудники не видят оборудование
   },
   { name: "Заявки", path: "/tickets", icon: Ticket },
+  {
+    name: "Заявки на технику",
+    path: "/equipment-requests",
+    icon: ShoppingCart,
+  },
   {
     name: "Расходники",
     path: "/consumables",

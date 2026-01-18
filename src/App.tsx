@@ -14,6 +14,7 @@ import { BuildingsPage } from "./pages/BuildingsPage";
 import { UsersPage } from "./pages/UsersPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { LicensesPage } from "./pages/LicensesPage";
+import { EquipmentRequestsPage } from "./pages/EquipmentRequestsPage";
 import { UnauthorizedPage } from "./pages/UnauthorizedPage";
 
 // Компонент для перенаправления в зависимости от роли
@@ -142,6 +143,16 @@ function App() {
             <ProtectedRoute requiredRoles={["admin", "it_specialist"]}>
               <Layout>
                 <LicensesPage />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/equipment-requests"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <EquipmentRequestsPage />
               </Layout>
             </ProtectedRoute>
           }

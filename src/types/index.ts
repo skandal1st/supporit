@@ -396,3 +396,54 @@ export interface Dictionary {
   created_at: string;
   updated_at: string;
 }
+
+// Заявки на оборудование
+
+// Тип заявки на оборудование
+export type EquipmentRequestType = "new" | "replacement" | "upgrade";
+
+// Срочность заявки
+export type EquipmentRequestUrgency = "low" | "normal" | "high" | "critical";
+
+// Статус заявки на оборудование
+export type EquipmentRequestStatus =
+  | "pending"
+  | "approved"
+  | "rejected"
+  | "ordered"
+  | "received"
+  | "issued"
+  | "cancelled";
+
+// Заявка на оборудование
+export interface EquipmentRequest {
+  id: string;
+  title: string;
+  description?: string;
+  equipment_category: EquipmentCategory;
+  request_type: EquipmentRequestType;
+  quantity: number;
+  urgency: EquipmentRequestUrgency;
+  justification?: string;
+  status: EquipmentRequestStatus;
+  requester_id: string;
+  requester_name?: string;
+  requester_email?: string;
+  requester_department?: string;
+  reviewer_id?: string;
+  reviewer_name?: string;
+  replace_equipment_id?: string;
+  replace_equipment_name?: string;
+  replace_equipment_inventory?: string;
+  issued_equipment_id?: string;
+  issued_equipment_name?: string;
+  issued_equipment_inventory?: string;
+  estimated_cost?: number;
+  review_comment?: string;
+  reviewed_at?: string;
+  ordered_at?: string;
+  received_at?: string;
+  issued_at?: string;
+  created_at: string;
+  updated_at: string;
+}
