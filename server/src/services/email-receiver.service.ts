@@ -439,6 +439,41 @@ function parseCategoryAndPriority(subject: string): {
 }
 
 /**
+ * Получение расширения файла по MIME-типу
+ */
+function getExtensionFromMimeType(contentType: string): string {
+  const mimeToExt: Record<string, string> = {
+    "image/jpeg": ".jpg",
+    "image/jpg": ".jpg",
+    "image/png": ".png",
+    "image/gif": ".gif",
+    "image/bmp": ".bmp",
+    "image/webp": ".webp",
+    "image/svg+xml": ".svg",
+    "application/pdf": ".pdf",
+    "application/msword": ".doc",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+      ".docx",
+    "application/vnd.ms-excel": ".xls",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":
+      ".xlsx",
+    "application/vnd.ms-powerpoint": ".ppt",
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation":
+      ".pptx",
+    "text/plain": ".txt",
+    "text/csv": ".csv",
+    "application/zip": ".zip",
+    "application/x-rar-compressed": ".rar",
+    "application/x-7z-compressed": ".7z",
+    "application/gzip": ".gz",
+  };
+
+  // Берём только основную часть MIME-типа (без charset и т.п.)
+  const baseMime = contentType.split(";")[0].trim().toLowerCase();
+  return mimeToExt[baseMime] || "";
+}
+
+/**
  * Сохранение вложений на диск
  */
 async function saveAttachments(
@@ -456,23 +491,37 @@ async function saveAttachments(
       `[Email Receiver] Вложение: filename="${attachment.filename}", contentType="${attachment.contentType}", size=${attachment.size}, contentDisposition="${attachment.contentDisposition}"`,
     );
     try {
+      // Определяем расширение файла
+      let ext = "";
+      let originalFilename = attachment.filename || "";
+
+      if (originalFilename && path.extname(originalFilename)) {
+        // Есть filename с расширением
+        ext = path.extname(originalFilename).toLowerCase();
+      } else if (attachment.contentType) {
+        // Нет filename или расширения - определяем по MIME-типу (для inline-картинок)
+        ext = getExtensionFromMimeType(attachment.contentType);
+        if (!originalFilename) {
+          originalFilename = `inline-image${ext}`;
+        }
+      }
+
       // Проверка типа файла (безопасность)
-      if (!isAllowedFileType(attachment.filename || "")) {
+      if (!ext || !isAllowedFileType(`file${ext}`)) {
         console.warn(
-          `[Email Receiver] Пропущен небезопасный файл: ${attachment.filename}`,
+          `[Email Receiver] Пропущен небезопасный файл: ${originalFilename || "без имени"} (ext: ${ext}, contentType: ${attachment.contentType})`,
         );
         continue;
       }
 
       // Генерируем уникальное имя файла
-      const ext = path.extname(attachment.filename || "");
       const filename = `${uuidv4()}${ext}`;
       const filepath = path.join(UPLOAD_DIR, filename);
 
       // Сохраняем файл (проверяем наличие content)
       if (!attachment.content) {
         console.warn(
-          `[Email Receiver] Вложение ${attachment.filename} не имеет содержимого, пропущено`,
+          `[Email Receiver] Вложение ${originalFilename} не имеет содержимого, пропущено`,
         );
         continue;
       }
@@ -482,7 +531,7 @@ async function saveAttachments(
       savedPaths.push(`/uploads/tickets/${filename}`);
 
       console.log(
-        `[Email Receiver] Сохранено вложение: ${filename} (${attachment.filename})`,
+        `[Email Receiver] Сохранено вложение: ${filename} (${originalFilename})`,
       );
     } catch (error) {
       console.error(
