@@ -450,7 +450,11 @@ async function saveAttachments(
   // Создаем директорию для загрузок, если не существует
   await fs.mkdir(UPLOAD_DIR, { recursive: true });
 
+  console.log(`[Email Receiver] Всего вложений: ${attachments.length}`);
   for (const attachment of attachments) {
+    console.log(
+      `[Email Receiver] Вложение: filename="${attachment.filename}", contentType="${attachment.contentType}", size=${attachment.size}, contentDisposition="${attachment.contentDisposition}"`,
+    );
     try {
       // Проверка типа файла (безопасность)
       if (!isAllowedFileType(attachment.filename || "")) {
