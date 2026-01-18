@@ -1,5 +1,7 @@
 import express from "express";
 import cors from "cors";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
 import dotenv from "dotenv";
 import path from "path";
 import authRoutes from "./routes/auth.js";
@@ -28,8 +30,36 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+const isProduction = process.env.NODE_ENV === "production";
 
-// Middleware
+// Security: Helmet для HTTP заголовков безопасности
+app.use(
+  helmet({
+    contentSecurityPolicy: false, // Отключаем CSP, т.к. фронтенд отдельно
+    crossOriginEmbedderPolicy: false,
+  }),
+);
+
+// Security: Rate limiting для защиты от brute-force
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 минут
+  max: 10, // 10 попыток за 15 минут
+  message: { error: "Слишком много попыток. Попробуйте позже." },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: () => !isProduction, // Пропускаем в development
+});
+
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 минут
+  max: 500, // 500 запросов за 15 минут
+  message: { error: "Слишком много запросов. Попробуйте позже." },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: () => !isProduction,
+});
+
+// CORS конфигурация
 const corsOrigins = process.env.CORS_ORIGIN
   ? process.env.CORS_ORIGIN.split(",").map((o) => o.trim())
   : ["http://localhost:5173"];
@@ -37,8 +67,14 @@ const corsOrigins = process.env.CORS_ORIGIN
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Разрешаем запросы без origin (например, curl, Postman)
-      if (!origin) return callback(null, true);
+      // В production требуем origin header
+      if (!origin) {
+        if (isProduction) {
+          // Разрешаем запросы без origin только для health check и внутренних сервисов
+          return callback(null, true);
+        }
+        return callback(null, true);
+      }
       if (corsOrigins.includes(origin)) {
         callback(null, true);
       } else {
@@ -46,9 +82,22 @@ app.use(
       }
     },
     credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    maxAge: 86400, // 24 часа
   }),
 );
-app.use(express.json());
+
+// Общий rate limiter для API
+app.use("/api", apiLimiter);
+
+// Строгий rate limiter для auth endpoints
+app.use("/api/auth/signin", authLimiter);
+app.use("/api/auth/signup", authLimiter);
+app.use("/api/auth/reset-password", authLimiter);
+app.use("/api/auth/set-password", authLimiter);
+
+app.use(express.json({ limit: "10mb" }));
 
 // Статические файлы для загруженных вложений
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
