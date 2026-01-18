@@ -9,7 +9,6 @@ import {
   Menu,
   X,
   Box,
-  Building2,
   Settings,
   Key,
   ShoppingCart,
@@ -70,12 +69,6 @@ const navItems: NavItem[] = [
     path: "/users",
     icon: Users,
     checkPermission: canManageUsers,
-  },
-  {
-    name: "Здания",
-    path: "/buildings",
-    icon: Building2,
-    checkPermission: (role) => role !== "employee", // Сотрудники не видят здания
   },
   {
     name: "Настройки",
