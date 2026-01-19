@@ -102,6 +102,112 @@ router.get(
   },
 );
 
+// GET /api/settings/branding - публичный endpoint для получения branding настроек
+// Не требует аутентификации, т.к. используется для отображения title и favicon
+router.get("/branding", async (req, res: Response) => {
+  try {
+    const result = await pool.query(
+      `SELECT setting_key, setting_value
+       FROM system_settings
+       WHERE setting_type = 'branding'`,
+    );
+
+    const branding: Record<string, string> = {};
+    for (const row of result.rows) {
+      branding[row.setting_key] = row.setting_value || "";
+    }
+
+    res.json({
+      data: {
+        site_title: branding.site_title || "SuppOrIT",
+        site_favicon: branding.site_favicon || "",
+      },
+    });
+  } catch (error) {
+    console.error("[Settings API] Ошибка получения branding настроек:", error);
+    // Возвращаем дефолтные значения в случае ошибки
+    res.json({
+      data: {
+        site_title: "SuppOrIT",
+        site_favicon: "",
+      },
+    });
+  }
+});
+
+// POST /api/settings/upload-favicon - загрузка файла favicon (только admin)
+router.post(
+  "/upload-favicon",
+  authenticate,
+  requireRole("admin"),
+  faviconUpload.single("favicon"),
+  async (req: MulterRequest, res: Response) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "Файл не загружен" });
+      }
+
+      // Формируем URL для доступа к файлу
+      const faviconUrl = `/uploads/branding/${req.file.filename}`;
+
+      // Обновляем настройку в БД
+      await pool.query(
+        `UPDATE system_settings
+         SET setting_value = $1, updated_at = NOW()
+         WHERE setting_key = 'site_favicon'`,
+        [faviconUrl],
+      );
+
+      res.json({
+        message: "Favicon успешно загружен",
+        data: {
+          url: faviconUrl,
+        },
+      });
+    } catch (error) {
+      console.error("[Settings API] Ошибка загрузки favicon:", error);
+      res.status(500).json({ error: "Ошибка при загрузке favicon" });
+    }
+  },
+);
+
+// DELETE /api/settings/favicon - удаление favicon (только admin)
+router.delete(
+  "/favicon",
+  authenticate,
+  requireRole("admin"),
+  async (req: AuthRequest, res: Response) => {
+    try {
+      // Получаем текущий путь favicon
+      const result = await pool.query(
+        `SELECT setting_value FROM system_settings WHERE setting_key = 'site_favicon'`,
+      );
+
+      const currentFavicon = result.rows[0]?.setting_value;
+
+      // Удаляем файл если существует
+      if (currentFavicon) {
+        const filePath = path.join(process.cwd(), currentFavicon);
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+        }
+      }
+
+      // Очищаем настройку в БД
+      await pool.query(
+        `UPDATE system_settings
+         SET setting_value = '', updated_at = NOW()
+         WHERE setting_key = 'site_favicon'`,
+      );
+
+      res.json({ message: "Favicon удален" });
+    } catch (error) {
+      console.error("[Settings API] Ошибка удаления favicon:", error);
+      res.status(500).json({ error: "Ошибка при удалении favicon" });
+    }
+  },
+);
+
 // GET /api/settings/:key - получить конкретную настройку (только admin)
 router.get(
   "/:key",
@@ -325,112 +431,6 @@ router.post(
         error: "Ошибка при отправке тестового письма",
         details: error instanceof Error ? error.message : "Неизвестная ошибка",
       });
-    }
-  },
-);
-
-// GET /api/settings/branding - публичный endpoint для получения branding настроек
-// Не требует аутентификации, т.к. используется для отображения title и favicon
-router.get("/branding", async (req, res: Response) => {
-  try {
-    const result = await pool.query(
-      `SELECT setting_key, setting_value
-       FROM system_settings
-       WHERE setting_type = 'branding'`,
-    );
-
-    const branding: Record<string, string> = {};
-    for (const row of result.rows) {
-      branding[row.setting_key] = row.setting_value || "";
-    }
-
-    res.json({
-      data: {
-        site_title: branding.site_title || "SuppOrIT",
-        site_favicon: branding.site_favicon || "",
-      },
-    });
-  } catch (error) {
-    console.error("[Settings API] Ошибка получения branding настроек:", error);
-    // Возвращаем дефолтные значения в случае ошибки
-    res.json({
-      data: {
-        site_title: "SuppOrIT",
-        site_favicon: "",
-      },
-    });
-  }
-});
-
-// POST /api/settings/upload-favicon - загрузка файла favicon (только admin)
-router.post(
-  "/upload-favicon",
-  authenticate,
-  requireRole("admin"),
-  faviconUpload.single("favicon"),
-  async (req: MulterRequest, res: Response) => {
-    try {
-      if (!req.file) {
-        return res.status(400).json({ error: "Файл не загружен" });
-      }
-
-      // Формируем URL для доступа к файлу
-      const faviconUrl = `/uploads/branding/${req.file.filename}`;
-
-      // Обновляем настройку в БД
-      await pool.query(
-        `UPDATE system_settings
-         SET setting_value = $1, updated_at = NOW()
-         WHERE setting_key = 'site_favicon'`,
-        [faviconUrl],
-      );
-
-      res.json({
-        message: "Favicon успешно загружен",
-        data: {
-          url: faviconUrl,
-        },
-      });
-    } catch (error) {
-      console.error("[Settings API] Ошибка загрузки favicon:", error);
-      res.status(500).json({ error: "Ошибка при загрузке favicon" });
-    }
-  },
-);
-
-// DELETE /api/settings/favicon - удаление favicon (только admin)
-router.delete(
-  "/favicon",
-  authenticate,
-  requireRole("admin"),
-  async (req: AuthRequest, res: Response) => {
-    try {
-      // Получаем текущий путь favicon
-      const result = await pool.query(
-        `SELECT setting_value FROM system_settings WHERE setting_key = 'site_favicon'`,
-      );
-
-      const currentFavicon = result.rows[0]?.setting_value;
-
-      // Удаляем файл если существует
-      if (currentFavicon) {
-        const filePath = path.join(process.cwd(), currentFavicon);
-        if (fs.existsSync(filePath)) {
-          fs.unlinkSync(filePath);
-        }
-      }
-
-      // Очищаем настройку в БД
-      await pool.query(
-        `UPDATE system_settings
-         SET setting_value = '', updated_at = NOW()
-         WHERE setting_key = 'site_favicon'`,
-      );
-
-      res.json({ message: "Favicon удален" });
-    } catch (error) {
-      console.error("[Settings API] Ошибка удаления favicon:", error);
-      res.status(500).json({ error: "Ошибка при удалении favicon" });
     }
   },
 );
