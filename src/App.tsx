@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useEffect } from "react";
 import { useAuthStore } from "./store/auth.store";
+import { useBranding } from "./hooks/useBranding";
 import { Layout } from "./components/layout/Layout";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import { LoginPage } from "./pages/LoginPage";
@@ -30,12 +31,13 @@ const RedirectRoute = () => {
 
 function App() {
   const { initialize, initialized } = useAuthStore();
+  const { loading: brandingLoading } = useBranding();
 
   useEffect(() => {
     initialize();
   }, [initialize]);
 
-  if (!initialized) {
+  if (!initialized || brandingLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>

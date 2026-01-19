@@ -363,7 +363,7 @@ export interface ZabbixEquipmentCounters {
 }
 
 // Системные настройки
-export type SettingType = "smtp" | "email" | "system" | "other";
+export type SettingType = "smtp" | "email" | "system" | "other" | "branding";
 
 export interface SystemSetting {
   id: string;
