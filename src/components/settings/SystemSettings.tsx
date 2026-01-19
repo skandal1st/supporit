@@ -311,12 +311,14 @@ export const SystemSettings = () => {
 
   // Обновление title страницы при сохранении
   const handleSaveBranding = async (setting: SystemSetting) => {
-    await handleSave(setting);
     if (setting.setting_key === "site_title") {
       const newTitle = editedValues[setting.setting_key];
+      await handleSave(setting);
       if (newTitle) {
         document.title = newTitle;
       }
+    } else {
+      await handleSave(setting);
     }
   };
 
