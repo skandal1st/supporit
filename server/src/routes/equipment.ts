@@ -14,6 +14,7 @@ router.get("/", authenticate, async (req: AuthRequest, res: Response) => {
       search,
       owner_id,
       department,
+      room,
       page = "1",
       pageSize = "20",
     } = req.query;
@@ -44,6 +45,12 @@ router.get("/", authenticate, async (req: AuthRequest, res: Response) => {
       paramCount++;
       query += ` AND location_department = $${paramCount}`;
       params.push(department);
+    }
+
+    if (room) {
+      paramCount++;
+      query += ` AND location_room = $${paramCount}`;
+      params.push(room);
     }
 
     if (search) {

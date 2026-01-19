@@ -7,6 +7,7 @@ export interface EquipmentFilters {
   search?: string;
   owner_id?: string;
   department?: string;
+  room?: string;
 }
 
 export interface EquipmentListResponse {
@@ -29,6 +30,7 @@ export const equipmentService = {
       if (filters?.category) params.append("category", filters.category);
       if (filters?.owner_id) params.append("owner_id", filters.owner_id);
       if (filters?.department) params.append("department", filters.department);
+      if (filters?.room) params.append("room", filters.room);
       if (filters?.search) params.append("search", filters.search);
       params.append("page", page.toString());
       params.append("pageSize", pageSize.toString());

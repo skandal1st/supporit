@@ -1,16 +1,61 @@
-import { useState, useEffect } from 'react';
-import { Plus, Search, Edit, Trash2, QrCode, Download, Printer } from 'lucide-react';
-import { equipmentService, type EquipmentFilters } from '../services/equipment.service';
-import { consumablesService } from '../services/consumables.service';
-import type { Equipment, EquipmentStatus } from '../types';
-import { Button } from '../components/ui/Button';
-import { Modal } from '../components/ui/Modal';
-import { EquipmentForm } from '../components/equipment/EquipmentForm';
-import { ZabbixStatus } from '../components/equipment/ZabbixStatus';
-import { Table, TableHeader, TableHeaderCell, TableBody, TableRow, TableCell } from '../components/ui/Table';
-import { formatCurrency, getStatusLabel, getStatusColor, getCategoryLabel } from '../utils/format';
-import { useAuthStore } from '../store/auth.store';
-import { canManageEquipment } from '../utils/permissions';
+import { useState, useEffect } from "react";
+import {
+  Plus,
+  Search,
+  Edit,
+  Trash2,
+  QrCode,
+  Download,
+  Printer,
+  X,
+} from "lucide-react";
+import {
+  equipmentService,
+  type EquipmentFilters,
+} from "../services/equipment.service";
+import { consumablesService } from "../services/consumables.service";
+import { buildingsService } from "../services/buildings.service";
+import { usersService } from "../services/users.service";
+import type {
+  Equipment,
+  EquipmentStatus,
+  EquipmentCategory,
+  Building,
+  Room,
+  User,
+} from "../types";
+import { Button } from "../components/ui/Button";
+import { Modal } from "../components/ui/Modal";
+import { EquipmentForm } from "../components/equipment/EquipmentForm";
+import { ZabbixStatus } from "../components/equipment/ZabbixStatus";
+import {
+  Table,
+  TableHeader,
+  TableHeaderCell,
+  TableBody,
+  TableRow,
+  TableCell,
+} from "../components/ui/Table";
+import {
+  formatCurrency,
+  getStatusLabel,
+  getStatusColor,
+  getCategoryLabel,
+} from "../utils/format";
+import { useAuthStore } from "../store/auth.store";
+import { canManageEquipment } from "../utils/permissions";
+
+// Категории оборудования для фильтра
+const equipmentCategories: { value: EquipmentCategory; label: string }[] = [
+  { value: "computer", label: "Компьютер" },
+  { value: "monitor", label: "Монитор" },
+  { value: "printer", label: "Принтер" },
+  { value: "network", label: "Сетевое оборудование" },
+  { value: "server", label: "Сервер" },
+  { value: "mobile", label: "Мобильное устройство" },
+  { value: "peripheral", label: "Периферия" },
+  { value: "other", label: "Прочее" },
+];
 
 export const EquipmentPage = () => {
   const { user } = useAuthStore();
@@ -20,8 +65,10 @@ export const EquipmentPage = () => {
   const [page, setPage] = useState(1);
   const [pageSize] = useState(20);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingEquipment, setEditingEquipment] = useState<Equipment | undefined>();
-  const [searchTerm, setSearchTerm] = useState('');
+  const [editingEquipment, setEditingEquipment] = useState<
+    Equipment | undefined
+  >();
+  const [searchTerm, setSearchTerm] = useState("");
   const [filters, setFilters] = useState<EquipmentFilters>({});
   const [qrModalOpen, setQrModalOpen] = useState(false);
   const [qrEquipment, setQrEquipment] = useState<Equipment | null>(null);
@@ -30,6 +77,12 @@ export const EquipmentPage = () => {
 
   const [error, setError] = useState<string | null>(null);
   const canManage = canManageEquipment(user?.role);
+
+  // Данные для фильтров
+  const [buildings, setBuildings] = useState<Building[]>([]);
+  const [rooms, setRooms] = useState<Room[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [selectedBuilding, setSelectedBuilding] = useState<string>("");
 
   const loadEquipment = async () => {
     setLoading(true);
@@ -41,27 +94,70 @@ export const EquipmentPage = () => {
           search: searchTerm || undefined,
         },
         page,
-        pageSize
+        pageSize,
       );
       if (result.error) {
-        console.error('Ошибка загрузки оборудования:', result.error);
-        setError(result.error.message || 'Ошибка при загрузке оборудования');
+        console.error("Ошибка загрузки оборудования:", result.error);
+        setError(result.error.message || "Ошибка при загрузке оборудования");
       } else {
         setEquipment(result.data);
         setTotalCount(result.count);
       }
     } catch (err) {
-      console.error('Исключение при загрузке:', err);
-      setError('Произошла ошибка при загрузке оборудования');
+      console.error("Исключение при загрузке:", err);
+      setError("Произошла ошибка при загрузке оборудования");
     } finally {
       setLoading(false);
     }
   };
 
+  // Загрузка данных для фильтров
+  const loadFilterData = async () => {
+    // Загружаем здания
+    const buildingsResult = await buildingsService.getBuildings();
+    if (!buildingsResult.error) {
+      setBuildings(buildingsResult.data);
+    }
+
+    // Загружаем пользователей
+    const usersResult = await usersService.getUsers();
+    if (!usersResult.error) {
+      setUsers(usersResult.data);
+    }
+  };
+
+  // Загрузка кабинетов при выборе здания
+  const loadRooms = async (buildingId: string) => {
+    if (!buildingId) {
+      setRooms([]);
+      return;
+    }
+    const roomsResult = await buildingsService.getRooms(buildingId);
+    if (!roomsResult.error) {
+      setRooms(roomsResult.data);
+    }
+  };
+
+  useEffect(() => {
+    loadFilterData();
+  }, []);
+
   useEffect(() => {
     loadEquipment();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, filters.status, searchTerm]);
+  }, [
+    page,
+    filters.status,
+    filters.category,
+    filters.department,
+    filters.room,
+    filters.owner_id,
+    searchTerm,
+  ]);
+
+  useEffect(() => {
+    loadRooms(selectedBuilding);
+  }, [selectedBuilding]);
 
   const handleCreate = () => {
     setEditingEquipment(undefined);
@@ -74,11 +170,11 @@ export const EquipmentPage = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Вы уверены, что хотите удалить это оборудование?')) return;
-    
+    if (!confirm("Вы уверены, что хотите удалить это оборудование?")) return;
+
     const { error } = await equipmentService.deleteEquipment(id);
     if (error) {
-      alert('Ошибка при удалении: ' + error.message);
+      alert("Ошибка при удалении: " + error.message);
     } else {
       loadEquipment();
     }
@@ -90,49 +186,60 @@ export const EquipmentPage = () => {
       ...data,
       // specifications уже должен быть в data, если он был заполнен
     };
-    
-    console.log('Данные для отправки:', submitData);
+
+    console.log("Данные для отправки:", submitData);
 
     let createdEquipmentId: string | null = null;
 
     if (editingEquipment) {
-      const { data: updatedEquipment, error } = await equipmentService.updateEquipment(editingEquipment.id, submitData);
+      const { data: updatedEquipment, error } =
+        await equipmentService.updateEquipment(editingEquipment.id, submitData);
       if (error) {
-        alert('Ошибка при обновлении: ' + error.message);
+        alert("Ошибка при обновлении: " + error.message);
         return;
       }
       createdEquipmentId = updatedEquipment?.id || null;
     } else {
-      const { data: newEquipment, error } = await equipmentService.createEquipment(submitData);
+      const { data: newEquipment, error } =
+        await equipmentService.createEquipment(submitData);
       if (error) {
-        alert('Ошибка при создании: ' + error.message);
+        alert("Ошибка при создании: " + error.message);
         return;
       }
       createdEquipmentId = newEquipment?.id || null;
     }
 
     // Если это принтер и есть данные о расходниках, создаем их и связываем с оборудованием
-    if (createdEquipmentId && submitData.category === 'printer' && submitData.specifications) {
+    if (
+      createdEquipmentId &&
+      submitData.category === "printer" &&
+      submitData.specifications
+    ) {
       const specs = submitData.specifications;
       const printType = specs.print_type;
-      const isColor = specs.is_color === true || specs.is_color === 'true';
-      const isLaser = printType === 'laser';
+      const isColor = specs.is_color === true || specs.is_color === "true";
+      const isLaser = printType === "laser";
 
       try {
         // Создаем фотобарабан для лазерных принтеров
         if (isLaser && specs.drum_model) {
-          const { data: drum, error: drumError } = await consumablesService.createConsumable({
-            name: `Фотобарабан ${specs.drum_model}`,
-            model: specs.drum_model,
-            category: 'printer_consumable',
-            consumable_type: 'drum',
-            unit: 'шт',
-            quantity_in_stock: 0,
-            min_quantity: 1,
-          });
+          const { data: drum, error: drumError } =
+            await consumablesService.createConsumable({
+              name: `Фотобарабан ${specs.drum_model}`,
+              model: specs.drum_model,
+              category: "printer_consumable",
+              consumable_type: "drum",
+              unit: "шт",
+              quantity_in_stock: 0,
+              min_quantity: 1,
+            });
 
           if (!drumError && drum) {
-            await equipmentService.linkConsumableToEquipment(createdEquipmentId, drum.id, 1);
+            await equipmentService.linkConsumableToEquipment(
+              createdEquipmentId,
+              drum.id,
+              1,
+            );
           }
         }
 
@@ -140,50 +247,77 @@ export const EquipmentPage = () => {
         if (isColor) {
           // Цветной принтер - 4 картриджа
           const cartridges = [
-            { key: 'cartridge_black', name: 'Картридж чёрный', model: specs.cartridge_black },
-            { key: 'cartridge_cyan', name: 'Картридж голубой', model: specs.cartridge_cyan },
-            { key: 'cartridge_magenta', name: 'Картридж пурпурный', model: specs.cartridge_magenta },
-            { key: 'cartridge_yellow', name: 'Картридж жёлтый', model: specs.cartridge_yellow },
+            {
+              key: "cartridge_black",
+              name: "Картридж чёрный",
+              model: specs.cartridge_black,
+            },
+            {
+              key: "cartridge_cyan",
+              name: "Картридж голубой",
+              model: specs.cartridge_cyan,
+            },
+            {
+              key: "cartridge_magenta",
+              name: "Картридж пурпурный",
+              model: specs.cartridge_magenta,
+            },
+            {
+              key: "cartridge_yellow",
+              name: "Картридж жёлтый",
+              model: specs.cartridge_yellow,
+            },
           ];
 
           for (const cartridge of cartridges) {
             if (cartridge.model) {
-              const { data: consumable, error: consumableError } = await consumablesService.createConsumable({
-                name: cartridge.name,
-                model: cartridge.model,
-                category: 'printer_consumable',
-                consumable_type: 'cartridge',
-                unit: 'шт',
-                quantity_in_stock: 0,
-                min_quantity: 1,
-              });
+              const { data: consumable, error: consumableError } =
+                await consumablesService.createConsumable({
+                  name: cartridge.name,
+                  model: cartridge.model,
+                  category: "printer_consumable",
+                  consumable_type: "cartridge",
+                  unit: "шт",
+                  quantity_in_stock: 0,
+                  min_quantity: 1,
+                });
 
               if (!consumableError && consumable) {
-                await equipmentService.linkConsumableToEquipment(createdEquipmentId, consumable.id, 1);
+                await equipmentService.linkConsumableToEquipment(
+                  createdEquipmentId,
+                  consumable.id,
+                  1,
+                );
               }
             }
           }
         } else {
           // Чёрно-белый принтер - один картридж
           if (specs.cartridge_black || specs.cartridge_type) {
-            const cartridgeModel = specs.cartridge_black || specs.cartridge_type;
-            const { data: consumable, error: consumableError } = await consumablesService.createConsumable({
-              name: 'Картридж чёрный',
-              model: cartridgeModel,
-              category: 'printer_consumable',
-              consumable_type: 'cartridge',
-              unit: 'шт',
-              quantity_in_stock: 0,
-              min_quantity: 1,
-            });
+            const cartridgeModel =
+              specs.cartridge_black || specs.cartridge_type;
+            const { data: consumable, error: consumableError } =
+              await consumablesService.createConsumable({
+                name: "Картридж чёрный",
+                model: cartridgeModel,
+                category: "printer_consumable",
+                consumable_type: "cartridge",
+                unit: "шт",
+                quantity_in_stock: 0,
+                min_quantity: 1,
+              });
 
             if (!consumableError && consumable) {
-              await equipmentService.linkConsumableToEquipment(createdEquipmentId, consumable.id, 1);
+              await equipmentService.linkConsumableToEquipment(
+                createdEquipmentId,
+                consumable.id,
+                1,
+              );
             }
           }
         }
       } catch (error) {
-        console.error('Ошибка при создании расходников:', error);
+        console.error("Ошибка при создании расходников:", error);
         // Не прерываем выполнение, просто логируем ошибку
       }
     }
@@ -193,13 +327,66 @@ export const EquipmentPage = () => {
     loadEquipment();
   };
 
-  const handleStatusFilter = (status: EquipmentStatus | 'all') => {
-    setFilters(prev => ({
+  const handleStatusFilter = (status: EquipmentStatus | "all") => {
+    setFilters((prev) => ({
       ...prev,
-      status: status === 'all' ? undefined : status,
+      status: status === "all" ? undefined : status,
     }));
     setPage(1);
   };
+
+  const handleCategoryFilter = (category: EquipmentCategory | "all") => {
+    setFilters((prev) => ({
+      ...prev,
+      category: category === "all" ? undefined : category,
+    }));
+    setPage(1);
+  };
+
+  const handleBuildingFilter = (buildingName: string) => {
+    setSelectedBuilding(
+      buildingName
+        ? buildings.find((b) => b.name === buildingName)?.id || ""
+        : "",
+    );
+    setFilters((prev) => ({
+      ...prev,
+      department: buildingName || undefined,
+      room: undefined, // Сбрасываем кабинет при смене здания
+    }));
+    setPage(1);
+  };
+
+  const handleRoomFilter = (roomName: string) => {
+    setFilters((prev) => ({
+      ...prev,
+      room: roomName || undefined,
+    }));
+    setPage(1);
+  };
+
+  const handleOwnerFilter = (ownerId: string) => {
+    setFilters((prev) => ({
+      ...prev,
+      owner_id: ownerId || undefined,
+    }));
+    setPage(1);
+  };
+
+  const clearFilters = () => {
+    setFilters({});
+    setSelectedBuilding("");
+    setSearchTerm("");
+    setPage(1);
+  };
+
+  const hasActiveFilters =
+    filters.status ||
+    filters.category ||
+    filters.department ||
+    filters.room ||
+    filters.owner_id ||
+    searchTerm;
 
   const handleShowQR = async (item: Equipment) => {
     setQrEquipment(item);
@@ -208,14 +395,16 @@ export const EquipmentPage = () => {
     setQrDataUrl(null);
 
     try {
-      const { data, error: qrError } = await equipmentService.getQRCode(item.id);
+      const { data, error: qrError } = await equipmentService.getQRCode(
+        item.id,
+      );
       if (qrError) {
-        console.error('Ошибка получения QR-кода:', qrError);
+        console.error("Ошибка получения QR-кода:", qrError);
       } else if (data?.dataUrl) {
         setQrDataUrl(data.dataUrl);
       }
     } catch (err) {
-      console.error('Ошибка получения QR-кода:', err);
+      console.error("Ошибка получения QR-кода:", err);
     } finally {
       setQrLoading(false);
     }
@@ -224,7 +413,7 @@ export const EquipmentPage = () => {
   const handleDownloadQR = () => {
     if (!qrDataUrl || !qrEquipment) return;
 
-    const link = document.createElement('a');
+    const link = document.createElement("a");
     link.href = qrDataUrl;
     link.download = `qr-${qrEquipment.inventory_number}.png`;
     document.body.appendChild(link);
@@ -235,7 +424,7 @@ export const EquipmentPage = () => {
   const handlePrintQR = () => {
     if (!qrDataUrl || !qrEquipment) return;
 
-    const printWindow = window.open('', '_blank');
+    const printWindow = window.open("", "_blank");
     if (!printWindow) return;
 
     printWindow.document.write(`
@@ -305,7 +494,9 @@ export const EquipmentPage = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Оборудование</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+            Оборудование
+          </h1>
           <p className="text-gray-600 dark:text-gray-400 mt-1">
             Всего: {totalCount} единиц
           </p>
@@ -338,8 +529,10 @@ export const EquipmentPage = () => {
           </div>
           <div className="flex gap-2">
             <select
-              value={filters.status || 'all'}
-              onChange={(e) => handleStatusFilter(e.target.value as EquipmentStatus | 'all')}
+              value={filters.status || "all"}
+              onChange={(e) =>
+                handleStatusFilter(e.target.value as EquipmentStatus | "all")
+              }
               className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
             >
               <option value="all">Все статусы</option>
@@ -348,7 +541,79 @@ export const EquipmentPage = () => {
               <option value="in_repair">В ремонте</option>
               <option value="written_off">Списано</option>
             </select>
+
+            {/* Фильтр по категории */}
+            <select
+              value={filters.category || "all"}
+              onChange={(e) =>
+                handleCategoryFilter(
+                  e.target.value as EquipmentCategory | "all",
+                )
+              }
+              className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            >
+              <option value="all">Все категории</option>
+              {equipmentCategories.map((cat) => (
+                <option key={cat.value} value={cat.value}>
+                  {cat.label}
+                </option>
+              ))}
+            </select>
           </div>
+        </div>
+
+        {/* Вторая строка фильтров */}
+        <div className="flex flex-col md:flex-row gap-4 mt-4">
+          {/* Фильтр по зданию */}
+          <select
+            value={filters.department || ""}
+            onChange={(e) => handleBuildingFilter(e.target.value)}
+            className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+          >
+            <option value="">Все здания</option>
+            {buildings.map((building) => (
+              <option key={building.id} value={building.name}>
+                {building.name}
+              </option>
+            ))}
+          </select>
+
+          {/* Фильтр по кабинету */}
+          <select
+            value={filters.room || ""}
+            onChange={(e) => handleRoomFilter(e.target.value)}
+            disabled={!selectedBuilding}
+            className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:opacity-50"
+          >
+            <option value="">Все кабинеты</option>
+            {rooms.map((room) => (
+              <option key={room.id} value={room.name}>
+                {room.name}
+              </option>
+            ))}
+          </select>
+
+          {/* Фильтр по владельцу */}
+          <select
+            value={filters.owner_id || ""}
+            onChange={(e) => handleOwnerFilter(e.target.value)}
+            className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+          >
+            <option value="">Все владельцы</option>
+            {users.map((u) => (
+              <option key={u.id} value={u.id}>
+                {u.full_name}
+              </option>
+            ))}
+          </select>
+
+          {/* Кнопка сброса фильтров */}
+          {hasActiveFilters && (
+            <Button variant="secondary" onClick={clearFilters} size="sm">
+              <X className="h-4 w-4 mr-1" />
+              Сбросить
+            </Button>
+          )}
         </div>
       </div>
 
@@ -392,22 +657,32 @@ export const EquipmentPage = () => {
                   <TableCell>
                     <div>
                       <div className="font-medium">{item.name}</div>
-                      {item.model && <div className="text-sm text-gray-500 dark:text-gray-400">{item.model}</div>}
+                      {item.model && (
+                        <div className="text-sm text-gray-500 dark:text-gray-400">
+                          {item.model}
+                        </div>
+                      )}
                     </div>
                   </TableCell>
                   <TableCell>{item.inventory_number}</TableCell>
                   <TableCell>{getCategoryLabel(item.category)}</TableCell>
                   <TableCell>
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(item.status)}`}>
+                    <span
+                      className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(item.status)}`}
+                    >
                       {getStatusLabel(item.status)}
                     </span>
                   </TableCell>
                   <TableCell>
                     {item.current_owner ? (
                       <div>
-                        <div className="font-medium">{item.current_owner.full_name}</div>
+                        <div className="font-medium">
+                          {item.current_owner.full_name}
+                        </div>
                         {item.current_owner.department && (
-                          <div className="text-sm text-gray-500 dark:text-gray-400">{item.current_owner.department}</div>
+                          <div className="text-sm text-gray-500 dark:text-gray-400">
+                            {item.current_owner.department}
+                          </div>
                         )}
                       </div>
                     ) : (
@@ -418,7 +693,11 @@ export const EquipmentPage = () => {
                     {item.location_department ? (
                       <div>
                         {item.location_department}
-                        {item.location_room && <div className="text-sm text-gray-500 dark:text-gray-400">{item.location_room}</div>}
+                        {item.location_room && (
+                          <div className="text-sm text-gray-500 dark:text-gray-400">
+                            {item.location_room}
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <span className="text-gray-400">-</span>
@@ -459,7 +738,9 @@ export const EquipmentPage = () => {
                         </button>
                       </div>
                     ) : (
-                      <span className="text-gray-400 text-sm">Только просмотр</span>
+                      <span className="text-gray-400 text-sm">
+                        Только просмотр
+                      </span>
                     )}
                   </TableCell>
                 </TableRow>
@@ -472,7 +753,8 @@ export const EquipmentPage = () => {
         {!loading && totalCount > pageSize && (
           <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
             <div className="text-sm text-gray-700 dark:text-gray-300">
-              Показано {(page - 1) * pageSize + 1} - {Math.min(page * pageSize, totalCount)} из {totalCount}
+              Показано {(page - 1) * pageSize + 1} -{" "}
+              {Math.min(page * pageSize, totalCount)} из {totalCount}
             </div>
             <div className="flex gap-2">
               <Button
@@ -503,7 +785,11 @@ export const EquipmentPage = () => {
           setIsModalOpen(false);
           setEditingEquipment(undefined);
         }}
-        title={editingEquipment ? 'Редактирование оборудования' : 'Добавление оборудования'}
+        title={
+          editingEquipment
+            ? "Редактирование оборудования"
+            : "Добавление оборудования"
+        }
         size="xl"
         confirmClose
         confirmMessage="Вы уверены, что хотите закрыть окно? Несохранённые данные оборудования будут потеряны."
@@ -570,4 +856,3 @@ export const EquipmentPage = () => {
     </div>
   );
 };
-
