@@ -114,7 +114,7 @@ CREATE TABLE IF NOT EXISTS tickets (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   title TEXT NOT NULL,
   description TEXT NOT NULL,
-  category TEXT NOT NULL CHECK (category IN ('hardware', 'software', 'network', 'other')),
+  category TEXT NOT NULL CHECK (category IN ('hardware', 'software', 'network', 'hr', 'other')),
   priority TEXT NOT NULL DEFAULT 'medium' CHECK (priority IN ('low', 'medium', 'high', 'critical')),
   status TEXT NOT NULL DEFAULT 'new' CHECK (status IN ('new', 'in_progress', 'waiting', 'resolved', 'closed')),
   creator_id UUID NOT NULL REFERENCES users(id),

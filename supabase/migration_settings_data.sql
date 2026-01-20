@@ -6,7 +6,8 @@ INSERT INTO dictionaries (dictionary_type, key, label, color, sort_order, is_sys
   ('ticket_category', 'hardware', 'Оборудование', NULL, 1, true),
   ('ticket_category', 'software', 'Программное обеспечение', NULL, 2, true),
   ('ticket_category', 'network', 'Сеть', NULL, 3, true),
-  ('ticket_category', 'other', 'Прочее', NULL, 4, true)
+  ('ticket_category', 'hr', 'HR / Кадры', 'Заявки связанные с HR-процессами', 4, true),
+  ('ticket_category', 'other', 'Прочее', NULL, 5, true)
 ON CONFLICT (dictionary_type, key) DO NOTHING;
 
 -- Приоритеты тикетов

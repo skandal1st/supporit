@@ -87,6 +87,7 @@ const getCategoryLabel = (category: TicketCategory): string => {
     hardware: "Оборудование",
     software: "ПО",
     network: "Сеть",
+    hr: "HR / Кадры",
     other: "Прочее",
   };
   return labels[category] || category;

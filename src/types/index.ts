@@ -32,7 +32,7 @@ export type TicketStatus =
   | "pending_user";
 
 // Категории заявок
-export type TicketCategory = "hardware" | "software" | "network" | "other";
+export type TicketCategory = "hardware" | "software" | "network" | "hr" | "other";
 
 // Источник создания заявки
 export type TicketSource = "web" | "email" | "api";

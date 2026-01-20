@@ -17,7 +17,7 @@ import { AlertCircle, Package } from "lucide-react";
 const ticketSchema = z.object({
   title: z.string().min(1, "Заголовок обязателен"),
   description: z.string().min(1, "Описание обязательно"),
-  category: z.enum(["hardware", "software", "network", "other"]),
+  category: z.enum(["hardware", "software", "network", "hr", "other"]),
   priority: z.enum(["low", "medium", "high", "critical"]),
   location_department: z.string().optional(),
   location_room: z.string().optional(),
@@ -421,6 +421,7 @@ export const TicketForm = ({
             <option value="hardware">Оборудование</option>
             <option value="software">Программное обеспечение</option>
             <option value="network">Сеть</option>
+            <option value="hr">HR / Кадры</option>
             <option value="other">Прочее</option>
           </select>
         </div>

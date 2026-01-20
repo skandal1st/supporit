@@ -337,7 +337,7 @@ router.post('/hr-desk/tickets', authenticateIntegration, async (req: Integration
     const {
       title,
       description,
-      category = 'other',
+      category = 'hr',  // По умолчанию категория HR для заявок из HR_desk
       priority = 'medium',
       creator_email,
       equipment_id,

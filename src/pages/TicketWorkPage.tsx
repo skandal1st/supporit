@@ -90,6 +90,7 @@ const getCategoryLabel = (category: TicketCategory): string => {
     hardware: "Оборудование",
     software: "ПО",
     network: "Сеть",
+    hr: "HR / Кадры",
     other: "Прочее",
   };
   return labels[category] || category;
@@ -768,6 +769,7 @@ export const TicketWorkPage = () => {
                   <option value="hardware">Оборудование</option>
                   <option value="software">ПО</option>
                   <option value="network">Сеть</option>
+                  <option value="hr">HR / Кадры</option>
                   <option value="other">Прочее</option>
                 </select>
               ) : (
