@@ -104,7 +104,10 @@ export const TicketsPage = () => {
   const [viewingTicketId, setViewingTicketId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [filters, setFilters] = useState<TicketFilters>({});
-  const [hideClosed, setHideClosed] = useState(false);
+  const [hideClosed, setHideClosed] = useState(() => {
+    const saved = localStorage.getItem("tickets_hide_closed");
+    return saved === "true";
+  });
   const [error, setError] = useState<string | null>(null);
 
   const canManage = canManageTickets(user?.role);
@@ -296,7 +299,11 @@ export const TicketsPage = () => {
               <option value="critical">Критический</option>
             </select>
             <button
-              onClick={() => setHideClosed(!hideClosed)}
+              onClick={() => {
+                const newValue = !hideClosed;
+                setHideClosed(newValue);
+                localStorage.setItem("tickets_hide_closed", String(newValue));
+              }}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${
                 hideClosed
                   ? "bg-primary-100 border-primary-300 text-primary-700 dark:bg-primary-900 dark:border-primary-700 dark:text-primary-300"

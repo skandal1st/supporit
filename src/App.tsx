@@ -16,6 +16,7 @@ import { UsersPage } from "./pages/UsersPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { LicensesPage } from "./pages/LicensesPage";
 import { EquipmentRequestsPage } from "./pages/EquipmentRequestsPage";
+import { ReportsPage } from "./pages/ReportsPage";
 import { UnauthorizedPage } from "./pages/UnauthorizedPage";
 
 // Компонент для перенаправления в зависимости от роли
@@ -107,14 +108,7 @@ function App() {
           element={
             <ProtectedRoute requiredRoles={["admin", "it_specialist"]}>
               <Layout>
-                <div className="p-6">
-                  <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                    Отчеты
-                  </h1>
-                  <p className="text-gray-600 dark:text-gray-400 mt-2">
-                    Страница отчетов и аналитики (в разработке)
-                  </p>
-                </div>
+                <ReportsPage />
               </Layout>
             </ProtectedRoute>
           }

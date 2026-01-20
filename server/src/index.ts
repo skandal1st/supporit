@@ -21,6 +21,7 @@ import updatesRoutes from "./routes/updates.js";
 import adRoutes from "./routes/ad.js";
 import integrationsRoutes from "./routes/integrations.js";
 import equipmentRequestsRoutes from "./routes/equipment-requests.js";
+import reportsRoutes from "./routes/reports.js";
 import { pool } from "./config/database.js";
 import { startEmailCron } from "./services/email-cron.service.js";
 import { verifySmtpConnection } from "./services/email-sender.service.js";
@@ -120,6 +121,7 @@ app.use("/api/updates", updatesRoutes);
 app.use("/api/ad", adRoutes);
 app.use("/api/integrations", integrationsRoutes);
 app.use("/api/equipment-requests", equipmentRequestsRoutes);
+app.use("/api/reports", reportsRoutes);
 
 // Health check
 app.get("/health", async (req, res) => {
