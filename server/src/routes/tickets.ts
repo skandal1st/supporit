@@ -20,6 +20,7 @@ router.get("/", authenticate, async (req: AuthRequest, res: Response) => {
       location_department,
       location_room,
       excludeStatuses,
+      search,
       page = "1",
       pageSize = "20",
     } = req.query;
@@ -27,6 +28,13 @@ router.get("/", authenticate, async (req: AuthRequest, res: Response) => {
     let query = "SELECT * FROM tickets WHERE 1=1";
     const params: any[] = [];
     let paramCount = 0;
+
+    // Поиск по заголовку и описанию
+    if (search && typeof search === "string" && search.trim()) {
+      paramCount++;
+      query += ` AND (title ILIKE $${paramCount} OR description ILIKE $${paramCount})`;
+      params.push(`%${search.trim()}%`);
+    }
 
     if (status) {
       paramCount++;
