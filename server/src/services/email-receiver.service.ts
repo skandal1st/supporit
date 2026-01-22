@@ -9,6 +9,7 @@ import { pool } from "../config/database.js";
 import path from "path";
 import fs from "fs/promises";
 import { v4 as uuidv4 } from "uuid";
+import { notifyNewTicket } from "./notification.service.js";
 
 // Типы
 interface EmailConfig {
@@ -650,6 +651,16 @@ async function createTicketFromEmail(data: ParsedTicketData): Promise<void> {
     }
     if (data.messageId) {
       console.log(`[Email Receiver]    Message-ID: ${data.messageId}`);
+    }
+
+    // Отправляем уведомление в Telegram о новой заявке из почты
+    try {
+      await notifyNewTicket(ticket.id, ticket.title);
+    } catch (notifyError) {
+      console.error(
+        "[Email Receiver] Ошибка отправки уведомления:",
+        notifyError,
+      );
     }
   } catch (error) {
     await client.query("ROLLBACK");

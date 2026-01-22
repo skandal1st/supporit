@@ -677,7 +677,9 @@ router.put("/:id", authenticate, async (req: AuthRequest, res: Response) => {
     }
 
     // Уведомление об изменении статуса (отправляем создателю заявки)
-    if (newStatus !== oldStatus && ticket.creator_id) {
+    // Не отправляем уведомления после того, как заявка взята в работу (oldStatus != 'new')
+    // Уведомления отправляются только при взятии заявки в работу (new -> in_progress)
+    if (newStatus !== oldStatus && ticket.creator_id && oldStatus === "new") {
       await notifyTicketStatusChanged(
         ticket.creator_id,
         ticket.id,
