@@ -15,6 +15,7 @@ import {
   FileText,
   Image,
   Download,
+  Package,
 } from "lucide-react";
 import { ticketsService } from "../services/tickets.service";
 import { usersService } from "../services/users.service";
@@ -27,6 +28,7 @@ import type {
   TicketCategory,
   User as UserType,
   Equipment,
+  EquipmentConsumable,
   Building,
   Room,
 } from "../types";
@@ -134,6 +136,16 @@ export const TicketWorkPage = () => {
     null,
   );
 
+  // Расходники
+  const [consumables, setConsumables] = useState<EquipmentConsumable[]>([]);
+  const [selectedConsumables, setSelectedConsumables] = useState<Set<string>>(
+    new Set(),
+  );
+  const [loadingConsumables, setLoadingConsumables] = useState(false);
+  const [selectedEquipment, setSelectedEquipment] = useState<Equipment | null>(
+    null,
+  );
+
   useEffect(() => {
     if (id) {
       loadTicket();
@@ -160,6 +172,54 @@ export const TicketWorkPage = () => {
       setEquipmentList([]);
     }
   }, [editedLocationDepartment, editedLocationRoom]);
+
+  // Загрузка расходников при выборе оборудования
+  useEffect(() => {
+    const loadConsumables = async () => {
+      if (editedEquipmentId) {
+        setLoadingConsumables(true);
+        try {
+          // Загружаем информацию об оборудовании
+          const { data: equipmentData, error: equipmentError } =
+            await equipmentService.getEquipmentById(editedEquipmentId);
+          if (!equipmentError && equipmentData) {
+            setSelectedEquipment(equipmentData);
+          } else {
+            setSelectedEquipment(null);
+          }
+
+          // Загружаем расходники
+          const { data, error } =
+            await equipmentService.getEquipmentConsumables(editedEquipmentId);
+          if (!error && data) {
+            setConsumables(data);
+
+            // Если есть сохраненные выбранные расходники в тикете
+            if (
+              ticket?.selected_consumables &&
+              Array.isArray(ticket.selected_consumables)
+            ) {
+              setSelectedConsumables(new Set(ticket.selected_consumables));
+            }
+          } else {
+            setConsumables([]);
+          }
+        } catch (err) {
+          console.error("Ошибка загрузки расходников:", err);
+          setConsumables([]);
+          setSelectedEquipment(null);
+        } finally {
+          setLoadingConsumables(false);
+        }
+      } else {
+        setConsumables([]);
+        setSelectedEquipment(null);
+        setSelectedConsumables(new Set());
+      }
+    };
+
+    loadConsumables();
+  }, [editedEquipmentId, ticket?.selected_consumables]);
 
   const loadTicket = async () => {
     if (!id) return;
@@ -309,6 +369,7 @@ export const TicketWorkPage = () => {
         location_room: editedLocationRoom || null,
         equipment_id: editedEquipmentId || null,
         creator_id: editedCreatorId || null,
+        selected_consumables: Array.from(selectedConsumables),
       };
 
       // Автоматически устанавливаем даты при изменении статуса
@@ -348,6 +409,42 @@ export const TicketWorkPage = () => {
     setEditedAssigneeId(user.id);
     setHasChanges(true);
   };
+
+  // Обработчик выбора расходника
+  const handleConsumableToggle = (consumableId: string) => {
+    const newSelected = new Set(selectedConsumables);
+    if (newSelected.has(consumableId)) {
+      newSelected.delete(consumableId);
+    } else {
+      newSelected.add(consumableId);
+    }
+    setSelectedConsumables(newSelected);
+    setHasChanges(true);
+  };
+
+  // Фильтрация расходников по типу принтера
+  const getFilteredConsumables = () => {
+    if (!selectedEquipment || selectedEquipment.category !== "printer") {
+      return consumables;
+    }
+
+    const specs = selectedEquipment.specifications || {};
+    const printType = specs.print_type;
+
+    return consumables.filter((consumable) => {
+      const consumableType = (consumable as any).consumable_type || "";
+
+      if (printType === "laser") {
+        return consumableType === "cartridge" || consumableType === "drum";
+      } else if (printType === "inkjet") {
+        return consumableType === "cartridge" || consumableType === "ink";
+      }
+
+      return true;
+    });
+  };
+
+  const filteredConsumables = getFilteredConsumables();
 
   if (loading) {
     return (
@@ -568,6 +665,121 @@ export const TicketWorkPage = () => {
               </div>
             </div>
           </div>
+
+          {/* Расходные материалы */}
+          {canManage && editedEquipmentId && (
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg shadow p-6">
+              <div className="flex items-center mb-4">
+                <Package className="h-5 w-5 text-blue-600 dark:text-blue-400 mr-2" />
+                <h3 className="text-lg font-semibold text-blue-900 dark:text-blue-100">
+                  Расходные материалы
+                  {selectedEquipment?.category === "printer" && (
+                    <span className="text-xs font-normal text-blue-700 dark:text-blue-300 ml-2">
+                      (
+                      {selectedEquipment.specifications?.print_type === "laser"
+                        ? "Лазерный"
+                        : selectedEquipment.specifications?.print_type ===
+                            "inkjet"
+                          ? "Струйный"
+                          : "Принтер"}
+                      {selectedEquipment.specifications?.is_color === true ||
+                      selectedEquipment.specifications?.is_color === "true"
+                        ? ", цветной"
+                        : ", чёрно-белый"}
+                      )
+                    </span>
+                  )}
+                </h3>
+              </div>
+              {loadingConsumables ? (
+                <div className="text-sm text-blue-700 dark:text-blue-300 flex items-center">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+                  Загрузка расходников...
+                </div>
+              ) : filteredConsumables.length > 0 ? (
+                <div className="space-y-2">
+                  <p className="text-xs text-blue-700 dark:text-blue-300 mb-2">
+                    Выберите расходные материалы, которые будут списаны при
+                    закрытии заявки:
+                  </p>
+                  <ul className="space-y-2">
+                    {filteredConsumables.map((consumable) => {
+                      const isSelected = selectedConsumables.has(
+                        consumable.consumable_id,
+                      );
+                      const consumableType =
+                        (consumable as any).consumable_type || "";
+                      const typeLabels: Record<string, string> = {
+                        cartridge: "Картридж",
+                        drum: "Фотобарабан",
+                        toner: "Тонер",
+                        ink: "Чернила",
+                        paper: "Бумага",
+                        other: "Прочее",
+                      };
+
+                      return (
+                        <li
+                          key={consumable.consumable_id}
+                          className={`flex items-center justify-between text-sm p-3 rounded-lg border ${
+                            isSelected
+                              ? "bg-blue-100 dark:bg-blue-900/40 border-blue-300 dark:border-blue-700"
+                              : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700"
+                          }`}
+                        >
+                          <label className="flex items-center cursor-pointer flex-1">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() =>
+                                handleConsumableToggle(consumable.consumable_id)
+                              }
+                              className="mr-3 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                            />
+                            <span className="text-blue-900 dark:text-blue-100 flex-1">
+                              {consumable.consumable_name}
+                              {consumable.consumable_model &&
+                                ` (${consumable.consumable_model})`}
+                              {consumableType && (
+                                <span className="ml-2 text-xs text-blue-600 dark:text-blue-400">
+                                  [
+                                  {typeLabels[consumableType] || consumableType}
+                                  ]
+                                </span>
+                              )}
+                            </span>
+                          </label>
+                          <div className="flex items-center gap-2 ml-4">
+                            {consumable.is_low_stock && (
+                              <span title="Низкий остаток">
+                                <AlertCircle className="h-4 w-4 text-yellow-500" />
+                              </span>
+                            )}
+                            <span
+                              className={`font-medium text-xs ${consumable.is_low_stock ? "text-yellow-600 dark:text-yellow-400" : "text-blue-700 dark:text-blue-300"}`}
+                            >
+                              В наличии: {consumable.quantity_in_stock}
+                              {consumable.min_quantity > 0 &&
+                                ` (мин: ${consumable.min_quantity})`}
+                            </span>
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              ) : consumables.length > 0 ? (
+                <div className="text-sm text-blue-700 dark:text-blue-300">
+                  Для данного типа оборудования не найдено подходящих расходных
+                  материалов
+                </div>
+              ) : (
+                <div className="text-sm text-blue-700 dark:text-blue-300">
+                  Для данного оборудования не указаны расходные материалы
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Заявитель (для email-заявок без пользователя) */}
           {canManage && ticket.email_sender && !ticket.creator && (
